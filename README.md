@@ -1,4 +1,5 @@
 # File Transfer Server - Complete Documentation
+![Collage](/src/main/resources/static/Collage.png)
 
 ## Table of Contents
 - [Overview](#overview)
@@ -142,7 +143,8 @@ Each file is displayed as a beautiful card showing:
 - Mobile: 1 column of file cards
 
 ### Screenshots
-
+![Screenshot1](/src/main/resources/static/1.png)
+![Screenshot2](/src/main/resources/static/2.png)
 
 ---
 
