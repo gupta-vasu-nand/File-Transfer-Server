@@ -347,3 +347,27 @@ Caused by: java.lang.NoSuchMethodError: 'void org.springframework.web.method.Con
 2026-03-28 16:12:51.628 [http-nio-0.0.0.0-9090-exec-1] INFO  o.v.f.controller.FileController - Received request to list all files
 2026-03-28 16:13:03.392 [SpringApplicationShutdownHook] INFO  o.s.boot.tomcat.GracefulShutdown - Commencing graceful shutdown. Waiting for active requests to complete
 2026-03-28 16:13:03.536 [tomcat-shutdown] INFO  o.s.boot.tomcat.GracefulShutdown - Graceful shutdown complete
+2026-03-28 16:13:06.502 [main] INFO  o.v.f.FileTransferServerApplicationKt - Starting FileTransferServerApplicationKt using Java 17.0.12 with PID 52892 (C:\Users\Vasu\IntelliJ IDEA\File-Transfer-Server\build\classes\kotlin\main started by Vasu in C:\Users\Vasu\IntelliJ IDEA\File-Transfer-Server)
+2026-03-28 16:13:06.504 [main] DEBUG o.v.f.FileTransferServerApplicationKt - Running with Spring Boot v4.0.5, Spring v7.0.6
+2026-03-28 16:13:06.505 [main] INFO  o.v.f.FileTransferServerApplicationKt - No active profile set, falling back to 1 default profile: "default"
+2026-03-28 16:13:07.256 [background-preinit] INFO  o.h.validator.internal.util.Version - HV000001: Hibernate Validator 9.0.1.Final
+2026-03-28 16:13:07.854 [main] INFO  o.s.boot.tomcat.TomcatWebServer - Tomcat initialized with port 9090 (http)
+2026-03-28 16:13:07.865 [main] INFO  o.a.coyote.http11.Http11NioProtocol - Initializing ProtocolHandler ["http-nio-0.0.0.0-9090"]
+2026-03-28 16:13:07.867 [main] INFO  o.a.catalina.core.StandardService - Starting service [Tomcat]
+2026-03-28 16:13:07.868 [main] INFO  o.a.catalina.core.StandardEngine - Starting Servlet engine: [Apache Tomcat/11.0.20]
+2026-03-28 16:13:07.942 [main] INFO  o.s.b.w.c.s.WebApplicationContextInitializer - Root WebApplicationContext: initialization completed in 1396 ms
+2026-03-28 16:13:08.120 [main] INFO  o.v.f.config.StorageConfig - Using storage path from environment variable: C:\Users\Vasu\Downloads\Telegram Desktop
+2026-03-28 16:13:08.121 [main] INFO  o.v.f.config.StorageConfig - Storage directory already exists: C:\Users\Vasu\Downloads\Telegram Desktop
+2026-03-28 16:13:08.124 [main] INFO  o.v.f.config.StorageConfig - File storage initialized with path: C:\Users\Vasu\Downloads\Telegram Desktop
+2026-03-28 16:13:08.125 [main] INFO  o.v.f.config.StorageConfig - Max file size: 1024 MB
+2026-03-28 16:13:08.125 [main] INFO  o.v.f.config.StorageConfig - Allowed extensions: [*]
+2026-03-28 16:13:08.226 [main] INFO  o.s.b.w.a.WelcomePageHandlerMapping - Adding welcome page: class path resource [static/index.html]
+2026-03-28 16:13:08.666 [main] INFO  o.s.b.a.e.web.EndpointLinksResolver - Exposing 3 endpoints beneath base path '/actuator'
+2026-03-28 16:13:08.747 [main] INFO  o.a.coyote.http11.Http11NioProtocol - Starting ProtocolHandler ["http-nio-0.0.0.0-9090"]
+2026-03-28 16:13:08.776 [main] INFO  o.s.boot.tomcat.TomcatWebServer - Tomcat started on port 9090 (http) with context path '/'
+2026-03-28 16:13:08.788 [main] INFO  o.v.f.FileTransferServerApplicationKt - Started FileTransferServerApplicationKt in 2.823 seconds (process running for 3.474)
+2026-03-28 16:13:09.093 [RMI TCP Connection(3)-172.19.20.91] INFO  o.a.c.c.C.[Tomcat].[localhost].[/] - Initializing Spring DispatcherServlet 'dispatcherServlet'
+2026-03-28 16:13:09.094 [RMI TCP Connection(3)-172.19.20.91] INFO  o.s.web.servlet.DispatcherServlet - Initializing Servlet 'dispatcherServlet'
+2026-03-28 16:13:09.096 [RMI TCP Connection(3)-172.19.20.91] INFO  o.s.web.servlet.DispatcherServlet - Completed initialization in 1 ms
+2026-03-28 16:13:11.285 [http-nio-0.0.0.0-9090-exec-2] INFO  o.v.f.controller.FileController - Received request to list all files
+2026-03-28 16:13:47.129 [http-nio-0.0.0.0-9090-exec-3] INFO  o.v.f.controller.FileController - Received request to list all files
