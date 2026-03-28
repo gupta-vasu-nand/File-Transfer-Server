@@ -35,6 +35,9 @@ out/
 
 ### VS Code ###
 .vscode/
-
 ### Kotlin ###
 .kotlin
+
+
+logs
+logs/*

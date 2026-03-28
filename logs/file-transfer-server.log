@@ -371,3 +371,5 @@ Caused by: java.lang.NoSuchMethodError: 'void org.springframework.web.method.Con
 2026-03-28 16:13:09.096 [RMI TCP Connection(3)-172.19.20.91] INFO  o.s.web.servlet.DispatcherServlet - Completed initialization in 1 ms
 2026-03-28 16:13:11.285 [http-nio-0.0.0.0-9090-exec-2] INFO  o.v.f.controller.FileController - Received request to list all files
 2026-03-28 16:13:47.129 [http-nio-0.0.0.0-9090-exec-3] INFO  o.v.f.controller.FileController - Received request to list all files
+2026-03-28 16:36:20.659 [SpringApplicationShutdownHook] INFO  o.s.boot.tomcat.GracefulShutdown - Commencing graceful shutdown. Waiting for active requests to complete
+2026-03-28 16:36:20.823 [tomcat-shutdown] INFO  o.s.boot.tomcat.GracefulShutdown - Graceful shutdown complete
