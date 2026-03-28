@@ -2,29 +2,58 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Media Streaming Player</title>
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
         :root {
+            /* Core Brand Colors */
             --primary: #4f46e5;
             --primary-hover: #4338ca;
-            --bg-main: #f1f5f9;
-            --bg-card: #ffffff;
-            --bg-input: #f8fafc;
+            --secondary: #10b981;
+            --danger: #ef4444;
+            --danger-hover: #dc2626;
+
+            /* Light Theme Variables (Default) */
+            --bg-main: #f8fafc;
+            --surface: #ffffff;
+            --surface-hover: #f1f5f9;
             --text-main: #0f172a;
             --text-muted: #64748b;
             --border: #e2e8f0;
-            --radius: 16px;
+            --input-bg: #ffffff;
+            --icon-bg: #eef2ff;
+            --badge-bg: #f8fafc;
+
+            /* Shadows & Geometry */
+            --radius-md: 12px;
+            --radius-lg: 16px;
             --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
             --shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
             --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+        }
+
+        /* Dark Theme Variables */
+        body.dark-theme {
+            --bg-main: #000000;
+            --surface: #1e293b;
+            --surface-hover: #334155;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --border: #334155;
+            --input-bg: #0f172a;
+            --icon-bg: #312e81; /* Darker indigo for icons */
+            --badge-bg: #0f172a;
+            --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.3);
+            --shadow: 0 4px 6px -1px rgb(0 0 0 / 0.4);
+            --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.5);
         }
 
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
         }
 
         body {
@@ -33,48 +62,106 @@
             min-height: 100vh;
             color: var(--text-main);
             line-height: 1.5;
+            transition: background-color 0.3s ease, color 0.3s ease;
         }
 
         .container {
             max-width: 1400px;
             margin: 0 auto;
-            padding: 40px 20px;
+            padding: clamp(16px, 4vw, 40px) clamp(12px, 3vw, 24px);
         }
 
-        /* Header */
+        /* --- Header --- */
         .header {
-            text-align: center;
-            margin-bottom: 40px;
+            background: var(--surface);
+            border-radius: var(--radius-lg);
+            padding: clamp(24px, 4vw, 32px);
+            margin-bottom: 24px;
+            box-shadow: var(--shadow-sm);
+            border: 1px solid var(--border);
+            transition: all 0.3s ease;
+        }
+
+        .header-top {
             display: flex;
-            flex-direction: column;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 16px;
+            margin-bottom: 16px;
+        }
+
+        .title-wrapper {
+            display: flex;
             align-items: center;
             gap: 12px;
         }
 
-        .header-icon {
+        .title-wrapper i {
             color: var(--primary);
-            width: 54px;
-            height: 54px;
+            width: clamp(28px, 5vw, 36px);
+            height: clamp(28px, 5vw, 36px);
         }
 
         h1 {
-            font-size: 2.5rem;
+            font-size: clamp(1.4rem, 3vw, 1.8rem);
             font-weight: 800;
             letter-spacing: -0.5px;
             color: var(--text-main);
         }
 
-        .header p {
-            color: var(--text-muted);
-            font-size: 1.1rem;
-            max-width: 600px;
+        .header-actions {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
         }
 
-        /* Panels */
-        .panel {
-            background: var(--bg-card);
+        .subtitle {
+            color: var(--text-muted);
+            font-size: 1rem;
+            margin-bottom: 8px;
+        }
+
+        /* --- Buttons --- */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            font-size: 0.95rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-decoration: none;
+            white-space: nowrap;
+        }
+
+        .btn-icon {
+            padding: 10px;
+        }
+
+        .btn-outline {
+            background: transparent;
+            color: var(--text-main);
             border: 1px solid var(--border);
-            border-radius: var(--radius);
+        }
+
+        .btn-outline:hover {
+            background: var(--surface-hover);
+            border-color: var(--text-muted);
+        }
+
+        .btn-primary { background: var(--primary); color: white; }
+        .btn-primary:hover { background: var(--primary-hover); }
+
+        /* --- Panels --- */
+        .panel {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
             padding: 30px;
             box-shadow: var(--shadow);
             margin-bottom: 30px;
@@ -91,25 +178,24 @@
             color: var(--text-main);
         }
 
-        /* Inputs & Buttons */
+        /* --- Inputs & Server Config --- */
         .input-group {
-            display: flex;
+            display: grid;
+            grid-template-columns: 1fr 120px auto auto;
             gap: 12px;
-            flex-wrap: wrap;
         }
 
         input, select {
-            flex: 1;
-            min-width: 200px;
-            padding: 14px 20px;
+            width: 100%;
+            padding: 12px 16px;
             border: 1px solid var(--border);
-            border-radius: 12px;
-            background: var(--bg-input);
+            border-radius: 8px;
+            background: var(--input-bg);
             color: var(--text-main);
-            font-size: 1rem;
+            font-size: 0.95rem;
             outline: none;
             transition: all 0.2s;
-            box-shadow: var(--shadow-sm);
+            box-shadow: inset 0 1px 2px rgba(0,0,0,0.05);
         }
 
         select {
@@ -124,49 +210,12 @@
 
         input:focus, select:focus {
             border-color: var(--primary);
-            background: #ffffff;
-            box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.15);
+            box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.2);
         }
 
-        button {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
-            padding: 14px 24px;
-            border: none;
-            border-radius: 12px;
-            font-size: 1rem;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.2s;
-            box-shadow: var(--shadow-sm);
-        }
+        input::placeholder { color: var(--text-muted); }
 
-        .btn-primary {
-            background: var(--primary);
-            color: white;
-        }
-
-        .btn-primary:hover {
-            background: var(--primary-hover);
-            transform: translateY(-2px);
-            box-shadow: var(--shadow);
-        }
-
-        .btn-secondary {
-            background: #ffffff;
-            color: var(--text-main);
-            border: 1px solid var(--border);
-        }
-
-        .btn-secondary:hover {
-            background: #f8fafc;
-            transform: translateY(-2px);
-            box-shadow: var(--shadow);
-        }
-
-        /* Player Section */
+        /* --- Player Section --- */
         #playerSection {
             display: none;
             animation: fadeIn 0.5s ease;
@@ -179,7 +228,7 @@
 
         .player-wrapper {
             background: #000;
-            border-radius: 12px;
+            border-radius: var(--radius-md);
             overflow: hidden;
             box-shadow: var(--shadow-lg);
             position: relative;
@@ -194,17 +243,17 @@
 
         audio {
             padding: 20px;
-            background: var(--bg-input);
+            background: var(--surface-hover);
         }
 
-        /* Player Controls & Audio Processor */
+        /* Player Tools */
         .player-tools {
             display: flex;
             gap: 16px;
             padding: 16px;
-            background: var(--bg-input);
+            background: var(--surface-hover);
             border: 1px solid var(--border);
-            border-radius: 12px;
+            border-radius: var(--radius-md);
             margin-top: 16px;
             flex-wrap: wrap;
             align-items: center;
@@ -216,7 +265,7 @@
             gap: 12px;
             flex: 1;
             min-width: 200px;
-            background: #ffffff;
+            background: var(--surface);
             padding: 12px 16px;
             border-radius: 10px;
             border: 1px solid var(--border);
@@ -235,7 +284,7 @@
             flex: 1;
             padding: 0;
             height: 6px;
-            background: #e2e8f0;
+            background: var(--border);
             border-radius: 8px;
             outline: none;
             min-width: 100px;
@@ -245,8 +294,8 @@
         .media-info {
             margin-top: 16px;
             padding: 20px;
-            background: var(--bg-input);
-            border-radius: 12px;
+            background: var(--surface-hover);
+            border-radius: var(--radius-md);
             border: 1px solid var(--border);
             display: flex;
             flex-direction: column;
@@ -271,7 +320,7 @@
         }
         .info-row a:hover { text-decoration: underline; }
 
-        /* Controls Area */
+        /* --- Controls Area --- */
         .controls-area {
             display: flex;
             justify-content: space-between;
@@ -284,12 +333,14 @@
         .filters {
             display: flex;
             gap: 8px;
-            background: var(--bg-input);
+            background: var(--surface-hover);
             padding: 6px;
             border-radius: 14px;
             border: 1px solid var(--border);
             overflow-x: auto;
+            scrollbar-width: none;
         }
+        .filters::-webkit-scrollbar { display: none; }
 
         .filter-btn {
             padding: 10px 20px;
@@ -297,15 +348,21 @@
             border-radius: 10px;
             color: var(--text-muted);
             box-shadow: none;
+            border: none;
             white-space: nowrap;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.2s;
         }
 
         .filter-btn:hover { color: var(--text-main); }
         .filter-btn.active {
-            background: #ffffff;
+            background: var(--surface);
             color: var(--primary);
             box-shadow: var(--shadow-sm);
-            font-weight: 700;
         }
 
         .search-box {
@@ -330,7 +387,7 @@
             padding-left: 48px;
         }
 
-        /* Media Grid */
+        /* --- Media Grid --- */
         .media-grid {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
@@ -338,9 +395,9 @@
         }
 
         .media-card {
-            background: #ffffff;
+            background: var(--surface);
             border: 1px solid var(--border);
-            border-radius: 14px;
+            border-radius: var(--radius-md);
             cursor: pointer;
             transition: all 0.2s ease;
             display: flex;
@@ -351,7 +408,7 @@
 
         .media-card:hover {
             transform: translateY(-6px);
-            border-color: var(--primary);
+            border-color: var(--text-muted);
             box-shadow: var(--shadow-lg);
         }
 
@@ -359,14 +416,14 @@
             width: 100%;
             height: 160px;
             object-fit: cover;
-            background: #eef2ff;
+            background: var(--icon-bg);
             border-bottom: 1px solid var(--border);
         }
 
         .media-icon-wrapper {
             width: 100%;
             height: 160px;
-            background: #eef2ff;
+            background: var(--icon-bg);
             display: flex;
             align-items: center;
             justify-content: center;
@@ -374,10 +431,7 @@
             border-bottom: 1px solid var(--border);
         }
 
-        .media-icon-wrapper i {
-            width: 48px;
-            height: 48px;
-        }
+        .media-icon-wrapper i { width: 48px; height: 48px; }
 
         .media-content {
             padding: 20px;
@@ -408,7 +462,7 @@
             align-items: center;
             gap: 4px;
             padding: 4px 10px;
-            background: var(--bg-input);
+            background: var(--badge-bg);
             border: 1px solid var(--border);
             border-radius: 8px;
             font-size: 0.75rem;
@@ -418,7 +472,7 @@
 
         .badge i { width: 12px; height: 12px; }
 
-        /* Status & States */
+        /* --- Status & States --- */
         .status-msg {
             margin-top: 16px;
             font-size: 0.95rem;
@@ -428,7 +482,7 @@
             gap: 8px;
         }
 
-        .loading {
+        .loading, .empty-state {
             grid-column: 1 / -1;
             text-align: center;
             padding: 80px 20px;
@@ -437,8 +491,8 @@
             flex-direction: column;
             align-items: center;
             gap: 16px;
-            background: var(--bg-input);
-            border-radius: var(--radius);
+            background: var(--surface);
+            border-radius: var(--radius-lg);
             border: 1px dashed var(--border);
         }
 
@@ -451,17 +505,19 @@
 
         @keyframes spin { 100% { transform: rotate(360deg); } }
 
-        /* Responsiveness */
-        @media (max-width: 768px) {
-            .container { padding: 20px 16px; }
-            .header h1 { font-size: 2rem; }
-            .panel { padding: 20px; }
+        /* --- Responsiveness --- */
+        @media (max-width: 820px) {
+            .header-top { flex-direction: column; align-items: stretch; }
+            .header-actions { justify-content: flex-start; }
+            .input-group { grid-template-columns: 1fr; }
             .controls-area { flex-direction: column; align-items: stretch; gap: 12px; }
             .search-box { max-width: 100%; }
-            .input-group { flex-direction: column; }
-            .input-group input, .input-group select { width: 100%; }
-            .input-group button { width: 100%; }
-            .filters { flex-wrap: nowrap; overflow-x: auto; }
+        }
+
+        @media (max-width: 540px) {
+            .panel { padding: 20px; }
+            .header-actions { grid-template-columns: auto 1fr auto; display: grid; }
+            .media-btn { grid-column: span 3; }
             .tool-group { min-width: 100%; }
         }
     </style>
@@ -469,9 +525,21 @@
 <body>
 <div class="container">
     <div class="header">
-        <i data-lucide="play-circle" class="header-icon"></i>
-        <h1>Media Streaming Server</h1>
-        <p>Stream videos and audio locally from your network</p>
+        <div class="header-top">
+            <div class="title-wrapper">
+                <i data-lucide="play-circle"></i>
+                <h1>Media Streaming Server</h1>
+            </div>
+            <div class="header-actions">
+                <button class="btn btn-outline btn-icon" onclick="toggleTheme()" title="Toggle Theme">
+                    <i data-lucide="moon" id="themeIcon"></i>
+                </button>
+                <a href="index.html" class="btn btn-outline media-btn" title="Back to File Manager">
+                    <i data-lucide="folder"></i> File Manager
+                </a>
+            </div>
+        </div>
+        <p class="subtitle">Stream videos and audio locally from your network</p>
     </div>
 
     <div class="panel">
@@ -482,10 +550,10 @@
         <div class="input-group">
             <input type="text" id="serverIp" placeholder="Server IP (e.g., 192.168.1.5)" value="localhost">
             <input type="number" id="serverPort" placeholder="Port" value="9090" style="flex: 0 1 120px;">
-            <button class="btn-primary" onclick="connectToServer()">
+            <button class="btn btn-primary" onclick="connectToServer()">
                 <i data-lucide="plug"></i> Connect
             </button>
-            <button class="btn-secondary" onclick="autoDetectIp()">
+            <button class="btn btn-outline" onclick="autoDetectIp()">
                 <i data-lucide="scan"></i> Auto Detect
             </button>
         </div>
@@ -503,7 +571,7 @@
         <div class="player-tools" id="playerTools" style="display: none;">
             <div class="tool-group">
                 <label for="playbackSpeed"><i data-lucide="gauge"></i> Speed</label>
-                <select id="playbackSpeed" onchange="changePlaybackSpeed(this.value)" style="padding: 8px 12px; min-width: 80px;">
+                <select id="playbackSpeed" onchange="changePlaybackSpeed(this.value)">
                     <option value="0.5">0.5x</option>
                     <option value="1" selected>1.0x</option>
                     <option value="1.25">1.25x</option>
@@ -525,13 +593,13 @@
         <div class="controls-area">
             <div class="filters">
                 <button class="filter-btn active" onclick="filterMedia('all')">
-                    <i data-lucide="grid" style="width:18px; height:18px; margin-right:6px; vertical-align:text-bottom;"></i>All
+                    <i data-lucide="grid" style="width:18px; height:18px;"></i> All
                 </button>
                 <button class="filter-btn" onclick="filterMedia('video')">
-                    <i data-lucide="video" style="width:18px; height:18px; margin-right:6px; vertical-align:text-bottom;"></i>Videos
+                    <i data-lucide="video" style="width:18px; height:18px;"></i> Videos
                 </button>
                 <button class="filter-btn" onclick="filterMedia('audio')">
-                    <i data-lucide="music" style="width:18px; height:18px; margin-right:6px; vertical-align:text-bottom;"></i>Audio
+                    <i data-lucide="music" style="width:18px; height:18px;"></i> Audio
                 </button>
             </div>
             <div class="search-box">
@@ -540,8 +608,8 @@
             </div>
         </div>
         <div id="mediaGrid" class="media-grid">
-            <div class="loading">
-                <i data-lucide="folder-search" style="animation: none; width: 64px; height: 64px; color: #94a3b8;"></i>
+            <div class="empty-state">
+                <i data-lucide="folder-search" style="width: 64px; height: 64px; color: var(--text-muted);"></i>
                 <p>Connect to a server to view media files</p>
             </div>
         </div>
@@ -549,8 +617,37 @@
 </div>
 
 <script>
+    // Theme Initialization & Toggling
+    function initTheme() {
+        const savedTheme = localStorage.getItem('theme');
+        const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+
+        if (savedTheme === 'dark' || (!savedTheme && prefersDark)) {
+            document.body.classList.add('dark-theme');
+        }
+        updateThemeIcon();
+    }
+
+    function updateThemeIcon() {
+        const isDark = document.body.classList.contains('dark-theme');
+        const iconEl = document.getElementById('themeIcon');
+        if (iconEl) {
+            iconEl.setAttribute('data-lucide', isDark ? 'sun' : 'moon');
+            lucide.createIcons();
+        }
+    }
+
+    function toggleTheme() {
+        document.body.classList.toggle('dark-theme');
+        const isDark = document.body.classList.contains('dark-theme');
+        localStorage.setItem('theme', isDark ? 'dark' : 'light');
+        updateThemeIcon();
+    }
+
+    initTheme();
     lucide.createIcons();
 
+    // App Logic
     let currentBaseUrl = '';
     let mediaFiles = [];
     let currentFilter = 'all';
@@ -594,15 +691,15 @@
             if (response.ok) {
                 mediaFiles = await response.json();
                 renderMediaLibrary();
-                showConnectionStatus('Connected successfully!', '#059669', 'check-circle');
+                showConnectionStatus('Connected successfully!', '#10b981', 'check-circle');
                 localStorage.setItem('serverIp', ip);
                 localStorage.setItem('serverPort', port);
             } else {
                 throw new Error('Failed to connect');
             }
         } catch (error) {
-            showConnectionStatus('Failed to connect. Make sure server is running.', '#dc2626', 'alert-circle');
-            grid.innerHTML = '<div class="loading"><i data-lucide="wifi-off" style="animation:none;"></i><p>Connection failed.</p></div>';
+            showConnectionStatus('Failed to connect. Make sure server is running.', '#ef4444', 'alert-circle');
+            grid.innerHTML = '<div class="empty-state"><i data-lucide="wifi-off"></i><p>Connection failed.</p></div>';
             lucide.createIcons();
         }
     }
@@ -619,7 +716,7 @@
         const grid = document.getElementById('mediaGrid');
 
         if (!mediaFiles || mediaFiles.length === 0) {
-            grid.innerHTML = '<div class="loading"><i data-lucide="inbox" style="animation:none;"></i><p>No media files found</p></div>';
+            grid.innerHTML = '<div class="empty-state"><i data-lucide="inbox"></i><p>No media files found</p></div>';
             lucide.createIcons();
             return;
         }
@@ -635,7 +732,7 @@
         }
 
         if (filtered.length === 0) {
-            grid.innerHTML = '<div class="loading"><i data-lucide="search-x" style="animation:none;"></i><p>No media matches your search</p></div>';
+            grid.innerHTML = '<div class="empty-state"><i data-lucide="search-x"></i><p>No media matches your search</p></div>';
             lucide.createIcons();
             return;
         }
@@ -644,13 +741,12 @@
             const isVideo = media.contentType.startsWith('video/');
             const iconName = isVideo ? 'film' : 'music-4';
 
-            // Assume API might return media.thumbnail property
             const thumbnailHtml = media.thumbnail
                 ? `<img src="${currentBaseUrl}${media.thumbnail}" class="media-thumbnail" alt="Thumbnail" loading="lazy">`
                 : `<div class="media-icon-wrapper"><i data-lucide="${iconName}"></i></div>`;
 
             return `
-                <div class="media-card" onclick="playMedia('${media.filename}', '${media.contentType}')">
+                <div class="media-card" onclick="playMedia('${escapeHtml(media.filename)}', '${escapeHtml(media.contentType)}')">
                     ${thumbnailHtml}
                     <div class="media-content">
                         <div class="media-title">${escapeHtml(media.title)}</div>
@@ -696,7 +792,6 @@
                 gainNode.connect(audioCtx.destination);
             }
 
-            // Re-route audio if not already done for this specific element
             if (!mediaEl.dataset.processed) {
                 mediaElementSource = audioCtx.createMediaElementSource(mediaEl);
                 mediaElementSource.connect(gainNode);
@@ -738,7 +833,6 @@
         const streamUrl = `${currentBaseUrl}/api/stream/${encodeURIComponent(filename)}`;
         const sizeInfo = mediaFiles.find(m => m.filename === filename)?.sizeFormatted || 'Unknown';
 
-        // Add crossorigin="anonymous" to allow Web Audio API processing
         if (contentType.startsWith('video/')) {
             playerContainer.innerHTML = `
                 <video id="mediaPlayer" controls autoplay crossorigin="anonymous" playsinline>
@@ -757,7 +851,6 @@
 
         const playerEl = document.getElementById('mediaPlayer');
 
-        // Initialize Audio Context on play (browsers require user interaction)
         playerEl.addEventListener('play', () => {
             if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
             initAudioProcessor(playerEl);
@@ -784,16 +877,30 @@
     }
 
     function loadSavedConfig() {
-        const savedIp = localStorage.getItem('serverIp');
-        const savedPort = localStorage.getItem('serverPort');
+        const urlParams = new URLSearchParams(window.location.search);
+        let savedIp = urlParams.get('server') || localStorage.getItem('serverIp');
+        let savedPort = urlParams.get('port') || localStorage.getItem('serverPort');
 
         if (savedIp) document.getElementById('serverIp').value = savedIp;
         if (savedPort) document.getElementById('serverPort').value = savedPort;
 
         if (savedIp && savedPort) {
             setTimeout(() => connectToServer(), 300);
+
+            // If there's a file parameter, wait for load then auto-play
+            const fileToPlay = urlParams.get('file');
+            if (fileToPlay) {
+                setTimeout(() => {
+                    const media = mediaFiles.find(m => m.filename === fileToPlay);
+                    if (media) playMedia(media.filename, media.contentType);
+                }, 1000);
+            }
         }
     }
+
+    // Event Listeners
+    document.getElementById('serverIp').addEventListener('keypress', e => e.key === 'Enter' && connectToServer());
+    document.getElementById('serverPort').addEventListener('keypress', e => e.key === 'Enter' && connectToServer());
 
     loadSavedConfig();
 </script>
