@@ -9,7 +9,6 @@ plugins {
 
 group = "org.vng"
 version = "0.0.1-SNAPSHOT"
-description = "File-Transfer-Server"
 
 java {
     toolchain {
@@ -22,7 +21,7 @@ repositories {
 }
 
 dependencies {
-    // Spring Boot Starters
+    // Core Spring Boot
     implementation("org.springframework.boot:spring-boot-starter-web")
     implementation("org.springframework.boot:spring-boot-starter-validation")
     implementation("org.springframework.boot:spring-boot-starter-actuator")
@@ -32,8 +31,12 @@ dependencies {
     implementation("org.jetbrains.kotlin:kotlin-stdlib")
     implementation("com.fasterxml.jackson.module:jackson-module-kotlin")
 
-    // OpenAPI/Swagger documentation - Use a version compatible with Spring Boot 4.x
-    implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:2.8.5")
+    // Video/Audio streaming support
+    implementation("org.springframework:spring-web")
+    implementation("jakarta.servlet:jakarta.servlet-api")
+
+    // Optional: Thumbnail generation
+    implementation("org.bytedeco:javacv-platform:1.5.9")
 
     // Testing
     testImplementation("org.springframework.boot:spring-boot-starter-test")

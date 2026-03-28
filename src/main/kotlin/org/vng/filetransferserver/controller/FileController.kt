@@ -1,152 +1,152 @@
 package org.vng.filetransferserver.controller
 
-import org.vng.filetransferserver.dto.FileMetadataDTO
-import org.vng.filetransferserver.dto.FileUploadResponseDTO
-import org.vng.filetransferserver.service.FileService
-import io.swagger.v3.oas.annotations.Operation
-import io.swagger.v3.oas.annotations.Parameter
-import io.swagger.v3.oas.annotations.media.Content
-import io.swagger.v3.oas.annotations.media.Schema
-import io.swagger.v3.oas.annotations.responses.ApiResponse
-import io.swagger.v3.oas.annotations.responses.ApiResponses
-import io.swagger.v3.oas.annotations.tags.Tag
+import jakarta.servlet.http.HttpServletResponse
 import org.slf4j.LoggerFactory
 import org.springframework.core.io.Resource
 import org.springframework.http.HttpHeaders
-import org.springframework.http.MediaType
+import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.*
 import org.springframework.web.multipart.MultipartFile
-import org.springframework.web.servlet.support.ServletUriComponentsBuilder
+import org.vng.filetransferserver.dto.FileMetadataDTO
+import org.vng.filetransferserver.dto.FileUploadResponseDTO
+import org.vng.filetransferserver.exception.FileNotFoundException
+import org.vng.filetransferserver.service.FileService
+import org.vng.filetransferserver.service.MediaInfoDTO
+import org.vng.filetransferserver.service.StreamingService
+import org.vng.filetransferserver.service.impl.ClientDisconnectedException
 
 @RestController
-@RequestMapping("/api/files")
-@Tag(name = "File Transfer", description = "File upload and download operations")
+@RequestMapping("/api")
 class FileController(
-    private val fileService: FileService
+    private val fileService: FileService,
+    private val streamingService: StreamingService
 ) {
 
     private val logger = LoggerFactory.getLogger(FileController::class.java)
 
-    @PostMapping("/upload", consumes = [MediaType.MULTIPART_FORM_DATA_VALUE])
-    @Operation(summary = "Upload a file", description = "Upload a file to the server")
-    @ApiResponses(
-        value = [
-            ApiResponse(responseCode = "200", description = "File uploaded successfully"),
-            ApiResponse(responseCode = "400", description = "Invalid file or file type"),
-            ApiResponse(responseCode = "413", description = "File size exceeds limit"),
-            ApiResponse(responseCode = "500", description = "Internal server error")
-        ]
-    )
-    fun uploadFile(
-        @Parameter(description = "File to upload", required = true)
-        @RequestParam("file") file: MultipartFile
-    ): ResponseEntity<FileUploadResponseDTO> {
-
-        logger.info("Received upload request for file: ${file.originalFilename}, size: ${file.size} bytes")
-
+    @PostMapping("/files/upload")
+    fun uploadFile(@RequestParam("file") file: MultipartFile): ResponseEntity<FileUploadResponseDTO> {
+        logger.info("Received upload request for file: ${file.originalFilename}")
         val filename = fileService.uploadFile(file)
 
-        val downloadUrl = ServletUriComponentsBuilder.fromCurrentContextPath()
-            .path("/api/files/{filename}")
-            .buildAndExpand(filename)
-            .toUriString()
+        val downloadUrl = "http://localhost:9090/api/files/$filename"
 
         val response = FileUploadResponseDTO(
             filename = filename,
             originalFilename = file.originalFilename ?: filename,
             size = file.size,
             contentType = file.contentType ?: "application/octet-stream",
-            downloadUrl = downloadUrl
+            uploadTime = java.time.LocalDateTime.now(),
+            downloadUrl = downloadUrl,
+            message = "File uploaded successfully"
         )
 
         return ResponseEntity.ok(response)
     }
 
-    @GetMapping
-    @Operation(summary = "List all files", description = "Get list of all available files")
-    @ApiResponses(
-        value = [
-            ApiResponse(responseCode = "200", description = "Files listed successfully"),
-            ApiResponse(responseCode = "500", description = "Internal server error")
-        ]
-    )
+    @GetMapping("/files")
     fun listFiles(): ResponseEntity<List<FileMetadataDTO>> {
         logger.info("Received request to list all files")
-        val files = fileService.listFiles()
-        return ResponseEntity.ok(files)
+        return ResponseEntity.ok(fileService.listFiles())
     }
 
-    @GetMapping("/{filename}")
-    @Operation(summary = "Download a file", description = "Download a file by its filename")
-    @ApiResponses(
-        value = [
-            ApiResponse(responseCode = "200", description = "File downloaded successfully", content = [Content(schema = Schema(type = "string", format = "binary"))]),
-            ApiResponse(responseCode = "404", description = "File not found"),
-            ApiResponse(responseCode = "500", description = "Internal server error")
-        ]
-    )
-    fun downloadFile(
-        @Parameter(description = "Filename to download", required = true)
-        @PathVariable("filename") filename: String
-    ): ResponseEntity<Resource> {
-
+    @GetMapping("/files/{filename}")
+    fun downloadFile(@PathVariable("filename") filename: String): ResponseEntity<Resource> {
         logger.info("Received download request for file: $filename")
-
         val resource = fileService.downloadFile(filename)
         val metadata = fileService.getFileMetadata(filename)
 
         return ResponseEntity.ok()
             .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"${metadata.filename}\"")
-            .contentType(MediaType.parseMediaType(metadata.contentType ?: "application/octet-stream"))
+            .contentType(org.springframework.http.MediaType.parseMediaType(metadata.contentType ?: "application/octet-stream"))
             .contentLength(metadata.size)
             .body(resource)
     }
 
-    @DeleteMapping("/{filename}")
-    @Operation(summary = "Delete a file", description = "Delete a file by its filename")
-    @ApiResponses(
-        value = [
-            ApiResponse(responseCode = "200", description = "File deleted successfully"),
-            ApiResponse(responseCode = "404", description = "File not found"),
-            ApiResponse(responseCode = "500", description = "Internal server error")
-        ]
-    )
-    fun deleteFile(
-        @Parameter(description = "Filename to delete", required = true)
-        @PathVariable("filename") filename: String
-    ): ResponseEntity<Map<String, String>> {
-
+    @DeleteMapping("/files/{filename}")
+    fun deleteFile(@PathVariable("filename") filename: String): ResponseEntity<Map<String, String>> {
         logger.info("Received delete request for file: $filename")
-
-        val deleted = fileService.deleteFile(filename)
-
-        return ResponseEntity.ok(
-            mapOf(
-                "message" to "File deleted successfully",
-                "filename" to filename,
-                "deleted" to deleted.toString()
-            )
-        )
+        fileService.deleteFile(filename)
+        return ResponseEntity.ok(mapOf("message" to "File deleted successfully", "filename" to filename))
     }
 
-    @GetMapping("/{filename}/metadata")
-    @Operation(summary = "Get file metadata", description = "Get metadata for a specific file")
-    @ApiResponses(
-        value = [
-            ApiResponse(responseCode = "200", description = "Metadata retrieved successfully"),
-            ApiResponse(responseCode = "404", description = "File not found"),
-            ApiResponse(responseCode = "500", description = "Internal server error")
-        ]
-    )
-    fun getFileMetadata(
-        @Parameter(description = "Filename to get metadata for", required = true)
-        @PathVariable("filename") filename: String
-    ): ResponseEntity<FileMetadataDTO> {
-
+    @GetMapping("/files/{filename}/metadata")
+    fun getFileMetadata(@PathVariable("filename") filename: String): ResponseEntity<FileMetadataDTO> {
         logger.info("Received metadata request for file: $filename")
+        return ResponseEntity.ok(fileService.getFileMetadata(filename))
+    }
 
-        val metadata = fileService.getFileMetadata(filename)
-        return ResponseEntity.ok(metadata)
+    // Streaming endpoint with range support
+    @GetMapping("/stream/{filename}")
+    fun streamMedia(
+        @PathVariable("filename") filename: String,
+        @RequestHeader(value = "Range", required = false) rangeHeader: String?,
+        response: HttpServletResponse
+    ): ResponseEntity<Any> {
+        logger.info("Received stream request for: $filename, Range: $rangeHeader")
+
+        try {
+            val streamResponse = streamingService.streamMedia(filename, rangeHeader)
+
+            val headers = HttpHeaders().apply {
+                set("Accept-Ranges", "bytes")
+                set("Content-Type", streamResponse.contentType)
+                set("Content-Length", streamResponse.contentLength.toString())
+                set("Cache-Control", "no-cache")
+                set("Connection", "keep-alive")
+
+                if (rangeHeader != null) {
+                    set(HttpHeaders.CONTENT_RANGE, "bytes ${streamResponse.rangeStart}-${streamResponse.rangeEnd}/${streamResponse.totalSize}")
+                }
+            }
+
+            val status = if (rangeHeader != null) HttpStatus.PARTIAL_CONTENT else HttpStatus.OK
+
+            return ResponseEntity.status(status)
+                .headers(headers)
+                .body(streamResponse.resource)
+
+        } catch (e: ClientDisconnectedException) {
+            // Client disconnected - don't log as error
+            logger.debug("Client disconnected during streaming: ${e.message}")
+            return ResponseEntity.status(HttpStatus.PARTIAL_CONTENT).build()
+        } catch (e: FileNotFoundException) {
+            logger.warn("File not found: $filename")
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).build()
+        } catch (e: Exception) {
+            // Don't try to send error response if it's a connection issue
+            if (e.message?.contains("broken pipe") == true ||
+                e.message?.contains("aborted") == true ||
+                e.cause?.message?.contains("broken pipe") == true) {
+                logger.debug("Connection issue during streaming: ${e.message}")
+                return ResponseEntity.status(HttpStatus.PARTIAL_CONTENT).build()
+            }
+
+            logger.error("Error streaming media: ${e.message}", e)
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build()
+        }
+    }
+
+    // Get media information
+    @GetMapping("/media/{filename}/info")
+    fun getMediaInfo(@PathVariable("filename") filename: String): ResponseEntity<MediaInfoDTO> {
+        logger.info("Received media info request for: $filename")
+        val mediaInfo = streamingService.getMediaInfo(filename)
+        return ResponseEntity.ok(mediaInfo)
+    }
+
+    // Get all media files (videos and audio)
+    @GetMapping("/media")
+    fun listMediaFiles(): ResponseEntity<List<MediaInfoDTO>> {
+        logger.info("Received request to list all media files")
+        val allFiles = fileService.listFiles()
+        val mediaFiles = allFiles.filter {
+            it.contentType?.startsWith("video/") == true ||
+                    it.contentType?.startsWith("audio/") == true
+        }.map { file ->
+            streamingService.getMediaInfo(file.filename)
+        }
+        return ResponseEntity.ok(mediaFiles)
     }
 }

@@ -1,0 +1,801 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Media Streaming Player</title>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        :root {
+            --primary: #4f46e5;
+            --primary-hover: #4338ca;
+            --bg-main: #f1f5f9;
+            --bg-card: #ffffff;
+            --bg-input: #f8fafc;
+            --text-main: #0f172a;
+            --text-muted: #64748b;
+            --border: #e2e8f0;
+            --radius: 16px;
+            --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+            --shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+            --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background: var(--bg-main);
+            min-height: 100vh;
+            color: var(--text-main);
+            line-height: 1.5;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 40px 20px;
+        }
+
+        /* Header */
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .header-icon {
+            color: var(--primary);
+            width: 54px;
+            height: 54px;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            font-weight: 800;
+            letter-spacing: -0.5px;
+            color: var(--text-main);
+        }
+
+        .header p {
+            color: var(--text-muted);
+            font-size: 1.1rem;
+            max-width: 600px;
+        }
+
+        /* Panels */
+        .panel {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 30px;
+            box-shadow: var(--shadow);
+            margin-bottom: 30px;
+            transition: all 0.3s ease;
+        }
+
+        .panel-title {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin-bottom: 24px;
+            color: var(--text-main);
+        }
+
+        /* Inputs & Buttons */
+        .input-group {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        input, select {
+            flex: 1;
+            min-width: 200px;
+            padding: 14px 20px;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            background: var(--bg-input);
+            color: var(--text-main);
+            font-size: 1rem;
+            outline: none;
+            transition: all 0.2s;
+            box-shadow: var(--shadow-sm);
+        }
+
+        select {
+            cursor: pointer;
+            appearance: none;
+            background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+            background-repeat: no-repeat;
+            background-position: right 1rem center;
+            background-size: 1em;
+            padding-right: 2.5rem;
+        }
+
+        input:focus, select:focus {
+            border-color: var(--primary);
+            background: #ffffff;
+            box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.15);
+        }
+
+        button {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 14px 24px;
+            border: none;
+            border-radius: 12px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: var(--primary-hover);
+            transform: translateY(-2px);
+            box-shadow: var(--shadow);
+        }
+
+        .btn-secondary {
+            background: #ffffff;
+            color: var(--text-main);
+            border: 1px solid var(--border);
+        }
+
+        .btn-secondary:hover {
+            background: #f8fafc;
+            transform: translateY(-2px);
+            box-shadow: var(--shadow);
+        }
+
+        /* Player Section */
+        #playerSection {
+            display: none;
+            animation: fadeIn 0.5s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .player-wrapper {
+            background: #000;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: var(--shadow-lg);
+            position: relative;
+        }
+
+        video, audio {
+            width: 100%;
+            display: block;
+        }
+
+        video { max-height: 70vh; }
+
+        audio {
+            padding: 20px;
+            background: var(--bg-input);
+        }
+
+        /* Player Controls & Audio Processor */
+        .player-tools {
+            display: flex;
+            gap: 16px;
+            padding: 16px;
+            background: var(--bg-input);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            margin-top: 16px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .tool-group {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex: 1;
+            min-width: 200px;
+            background: #ffffff;
+            padding: 12px 16px;
+            border-radius: 10px;
+            border: 1px solid var(--border);
+        }
+
+        .tool-group label {
+            font-weight: 600;
+            font-size: 0.9rem;
+            color: var(--text-main);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        input[type="range"] {
+            flex: 1;
+            padding: 0;
+            height: 6px;
+            background: #e2e8f0;
+            border-radius: 8px;
+            outline: none;
+            min-width: 100px;
+            box-shadow: none;
+        }
+
+        .media-info {
+            margin-top: 16px;
+            padding: 20px;
+            background: var(--bg-input);
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .info-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--text-muted);
+        }
+
+        .info-row strong { color: var(--text-main); }
+        .info-row a {
+            color: var(--primary);
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-weight: 600;
+        }
+        .info-row a:hover { text-decoration: underline; }
+
+        /* Controls Area */
+        .controls-area {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+            flex-wrap: wrap;
+            gap: 16px;
+        }
+
+        .filters {
+            display: flex;
+            gap: 8px;
+            background: var(--bg-input);
+            padding: 6px;
+            border-radius: 14px;
+            border: 1px solid var(--border);
+            overflow-x: auto;
+        }
+
+        .filter-btn {
+            padding: 10px 20px;
+            background: transparent;
+            border-radius: 10px;
+            color: var(--text-muted);
+            box-shadow: none;
+            white-space: nowrap;
+        }
+
+        .filter-btn:hover { color: var(--text-main); }
+        .filter-btn.active {
+            background: #ffffff;
+            color: var(--primary);
+            box-shadow: var(--shadow-sm);
+            font-weight: 700;
+        }
+
+        .search-box {
+            position: relative;
+            flex: 1;
+            min-width: 250px;
+            max-width: 400px;
+        }
+
+        .search-box i {
+            position: absolute;
+            left: 16px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-muted);
+            width: 20px;
+            height: 20px;
+        }
+
+        .search-box input {
+            width: 100%;
+            padding-left: 48px;
+        }
+
+        /* Media Grid */
+        .media-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 24px;
+        }
+
+        .media-card {
+            background: #ffffff;
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            flex-direction: column;
+            box-shadow: var(--shadow-sm);
+            overflow: hidden;
+        }
+
+        .media-card:hover {
+            transform: translateY(-6px);
+            border-color: var(--primary);
+            box-shadow: var(--shadow-lg);
+        }
+
+        .media-thumbnail {
+            width: 100%;
+            height: 160px;
+            object-fit: cover;
+            background: #eef2ff;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .media-icon-wrapper {
+            width: 100%;
+            height: 160px;
+            background: #eef2ff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--primary);
+            border-bottom: 1px solid var(--border);
+        }
+
+        .media-icon-wrapper i {
+            width: 48px;
+            height: 48px;
+        }
+
+        .media-content {
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            flex-grow: 1;
+        }
+
+        .media-title {
+            font-weight: 600;
+            font-size: 1.05rem;
+            margin-bottom: 12px;
+            word-break: break-word;
+            line-height: 1.4;
+            flex-grow: 1;
+            color: var(--text-main);
+        }
+
+        .media-meta {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: auto;
+        }
+
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 4px 10px;
+            background: var(--bg-input);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            font-size: 0.75rem;
+            font-weight: 500;
+            color: var(--text-muted);
+        }
+
+        .badge i { width: 12px; height: 12px; }
+
+        /* Status & States */
+        .status-msg {
+            margin-top: 16px;
+            font-size: 0.95rem;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .loading {
+            grid-column: 1 / -1;
+            text-align: center;
+            padding: 80px 20px;
+            color: var(--text-muted);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 16px;
+            background: var(--bg-input);
+            border-radius: var(--radius);
+            border: 1px dashed var(--border);
+        }
+
+        .loading i {
+            animation: spin 2s linear infinite;
+            width: 40px;
+            height: 40px;
+            color: var(--primary);
+        }
+
+        @keyframes spin { 100% { transform: rotate(360deg); } }
+
+        /* Responsiveness */
+        @media (max-width: 768px) {
+            .container { padding: 20px 16px; }
+            .header h1 { font-size: 2rem; }
+            .panel { padding: 20px; }
+            .controls-area { flex-direction: column; align-items: stretch; gap: 12px; }
+            .search-box { max-width: 100%; }
+            .input-group { flex-direction: column; }
+            .input-group input, .input-group select { width: 100%; }
+            .input-group button { width: 100%; }
+            .filters { flex-wrap: nowrap; overflow-x: auto; }
+            .tool-group { min-width: 100%; }
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="header">
+        <i data-lucide="play-circle" class="header-icon"></i>
+        <h1>Media Streaming Server</h1>
+        <p>Stream videos and audio locally from your network</p>
+    </div>
+
+    <div class="panel">
+        <div class="panel-title">
+            <i data-lucide="server" style="color: var(--primary);"></i>
+            Server Configuration
+        </div>
+        <div class="input-group">
+            <input type="text" id="serverIp" placeholder="Server IP (e.g., 192.168.1.5)" value="localhost">
+            <input type="number" id="serverPort" placeholder="Port" value="9090" style="flex: 0 1 120px;">
+            <button class="btn-primary" onclick="connectToServer()">
+                <i data-lucide="plug"></i> Connect
+            </button>
+            <button class="btn-secondary" onclick="autoDetectIp()">
+                <i data-lucide="scan"></i> Auto Detect
+            </button>
+        </div>
+        <div id="connectionStatus" class="status-msg"></div>
+    </div>
+
+    <div id="playerSection" class="panel">
+        <div class="panel-title">
+            <i data-lucide="monitor-play" style="color: var(--primary);"></i>
+            Now Playing
+        </div>
+
+        <div class="player-wrapper" id="playerContainer"></div>
+
+        <div class="player-tools" id="playerTools" style="display: none;">
+            <div class="tool-group">
+                <label for="playbackSpeed"><i data-lucide="gauge"></i> Speed</label>
+                <select id="playbackSpeed" onchange="changePlaybackSpeed(this.value)" style="padding: 8px 12px; min-width: 80px;">
+                    <option value="0.5">0.5x</option>
+                    <option value="1" selected>1.0x</option>
+                    <option value="1.25">1.25x</option>
+                    <option value="1.5">1.5x</option>
+                    <option value="2">2.0x</option>
+                </select>
+            </div>
+            <div class="tool-group">
+                <label for="audioBoost" title="Boost quiet codecs (e.g. AC3/DTS)"><i data-lucide="speaker"></i> Audio Boost</label>
+                <input type="range" id="audioBoost" min="1" max="5" step="0.1" value="1" oninput="changeAudioBoost(this.value)">
+                <span id="boostValue" style="font-size: 0.85rem; font-weight: 600; width: 30px;">1x</span>
+            </div>
+        </div>
+
+        <div id="mediaInfo" class="media-info"></div>
+    </div>
+
+    <div id="mediaLibrary">
+        <div class="controls-area">
+            <div class="filters">
+                <button class="filter-btn active" onclick="filterMedia('all')">
+                    <i data-lucide="grid" style="width:18px; height:18px; margin-right:6px; vertical-align:text-bottom;"></i>All
+                </button>
+                <button class="filter-btn" onclick="filterMedia('video')">
+                    <i data-lucide="video" style="width:18px; height:18px; margin-right:6px; vertical-align:text-bottom;"></i>Videos
+                </button>
+                <button class="filter-btn" onclick="filterMedia('audio')">
+                    <i data-lucide="music" style="width:18px; height:18px; margin-right:6px; vertical-align:text-bottom;"></i>Audio
+                </button>
+            </div>
+            <div class="search-box">
+                <i data-lucide="search"></i>
+                <input type="text" id="searchInput" placeholder="Search your media library..." onkeyup="searchMedia()">
+            </div>
+        </div>
+        <div id="mediaGrid" class="media-grid">
+            <div class="loading">
+                <i data-lucide="folder-search" style="animation: none; width: 64px; height: 64px; color: #94a3b8;"></i>
+                <p>Connect to a server to view media files</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    lucide.createIcons();
+
+    let currentBaseUrl = '';
+    let mediaFiles = [];
+    let currentFilter = 'all';
+    let currentSearch = '';
+
+    // Web Audio API Context variables
+    let audioCtx;
+    let gainNode;
+    let mediaElementSource;
+
+    async function autoDetectIp() {
+        try {
+            const hostname = window.location.hostname;
+            if (hostname !== 'localhost' && hostname !== '127.0.0.1' && hostname !== '') {
+                document.getElementById('serverIp').value = hostname;
+                connectToServer();
+            } else {
+                alert('Please enter your server IP address manually');
+            }
+        } catch (error) {
+            console.error('Auto-detect failed:', error);
+        }
+    }
+
+    async function connectToServer() {
+        const ip = document.getElementById('serverIp').value.trim();
+        const port = document.getElementById('serverPort').value.trim();
+
+        if (!ip || !port) {
+            alert('Please enter both IP and port');
+            return;
+        }
+
+        currentBaseUrl = `http://${ip}:${port}`;
+        const grid = document.getElementById('mediaGrid');
+        grid.innerHTML = '<div class="loading"><i data-lucide="loader-2"></i><p>Connecting to server...</p></div>';
+        lucide.createIcons();
+
+        try {
+            const response = await fetch(`${currentBaseUrl}/api/media`);
+            if (response.ok) {
+                mediaFiles = await response.json();
+                renderMediaLibrary();
+                showConnectionStatus('Connected successfully!', '#059669', 'check-circle');
+                localStorage.setItem('serverIp', ip);
+                localStorage.setItem('serverPort', port);
+            } else {
+                throw new Error('Failed to connect');
+            }
+        } catch (error) {
+            showConnectionStatus('Failed to connect. Make sure server is running.', '#dc2626', 'alert-circle');
+            grid.innerHTML = '<div class="loading"><i data-lucide="wifi-off" style="animation:none;"></i><p>Connection failed.</p></div>';
+            lucide.createIcons();
+        }
+    }
+
+    function showConnectionStatus(message, color, icon) {
+        const statusDiv = document.getElementById('connectionStatus');
+        statusDiv.innerHTML = `<i data-lucide="${icon}" style="width:18px; height:18px;"></i> ${message}`;
+        statusDiv.style.color = color;
+        lucide.createIcons();
+        setTimeout(() => { statusDiv.innerHTML = ''; }, 4000);
+    }
+
+    async function renderMediaLibrary() {
+        const grid = document.getElementById('mediaGrid');
+
+        if (!mediaFiles || mediaFiles.length === 0) {
+            grid.innerHTML = '<div class="loading"><i data-lucide="inbox" style="animation:none;"></i><p>No media files found</p></div>';
+            lucide.createIcons();
+            return;
+        }
+
+        let filtered = mediaFiles;
+
+        if (currentFilter !== 'all') {
+            filtered = filtered.filter(media => media.contentType.startsWith(currentFilter + '/'));
+        }
+
+        if (currentSearch) {
+            filtered = filtered.filter(media => media.title.toLowerCase().includes(currentSearch.toLowerCase()));
+        }
+
+        if (filtered.length === 0) {
+            grid.innerHTML = '<div class="loading"><i data-lucide="search-x" style="animation:none;"></i><p>No media matches your search</p></div>';
+            lucide.createIcons();
+            return;
+        }
+
+        grid.innerHTML = filtered.map(media => {
+            const isVideo = media.contentType.startsWith('video/');
+            const iconName = isVideo ? 'film' : 'music-4';
+
+            // Assume API might return media.thumbnail property
+            const thumbnailHtml = media.thumbnail
+                ? `<img src="${currentBaseUrl}${media.thumbnail}" class="media-thumbnail" alt="Thumbnail" loading="lazy">`
+                : `<div class="media-icon-wrapper"><i data-lucide="${iconName}"></i></div>`;
+
+            return `
+                <div class="media-card" onclick="playMedia('${media.filename}', '${media.contentType}')">
+                    ${thumbnailHtml}
+                    <div class="media-content">
+                        <div class="media-title">${escapeHtml(media.title)}</div>
+                        <div class="media-meta">
+                            <span class="badge"><i data-lucide="hard-drive"></i> ${media.sizeFormatted || 'Unknown'}</span>
+                            ${media.resolution ? `<span class="badge"><i data-lucide="monitor"></i> ${media.resolution}</span>` : ''}
+                            ${media.bitrate ? `<span class="badge"><i data-lucide="activity"></i> ${Math.round(media.bitrate)} Kbps</span>` : ''}
+                        </div>
+                    </div>
+                </div>
+            `;
+        }).join('');
+
+        lucide.createIcons();
+    }
+
+    function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+
+    function filterMedia(type) {
+        currentFilter = type;
+        document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
+        event.currentTarget.classList.add('active');
+        renderMediaLibrary();
+    }
+
+    function searchMedia() {
+        currentSearch = document.getElementById('searchInput').value;
+        renderMediaLibrary();
+    }
+
+    function initAudioProcessor(mediaEl) {
+        try {
+            if (!audioCtx) {
+                const AudioContext = window.AudioContext || window.webkitAudioContext;
+                audioCtx = new AudioContext();
+            }
+            if (!gainNode) {
+                gainNode = audioCtx.createGain();
+                gainNode.connect(audioCtx.destination);
+            }
+
+            // Re-route audio if not already done for this specific element
+            if (!mediaEl.dataset.processed) {
+                mediaElementSource = audioCtx.createMediaElementSource(mediaEl);
+                mediaElementSource.connect(gainNode);
+                mediaEl.dataset.processed = "true";
+            }
+
+            // Reset sliders
+            document.getElementById('audioBoost').value = 1;
+            document.getElementById('boostValue').innerText = '1x';
+            gainNode.gain.value = 1;
+
+        } catch (e) {
+            console.warn("Audio Processor init failed (CORS or existing node):", e);
+        }
+    }
+
+    function changePlaybackSpeed(speed) {
+        const player = document.getElementById('mediaPlayer');
+        if (player) player.playbackRate = parseFloat(speed);
+    }
+
+    function changeAudioBoost(value) {
+        document.getElementById('boostValue').innerText = value + 'x';
+        if (gainNode) {
+            gainNode.gain.value = parseFloat(value);
+        }
+    }
+
+    function playMedia(filename, contentType) {
+        const playerSection = document.getElementById('playerSection');
+        const playerContainer = document.getElementById('playerContainer');
+        const playerTools = document.getElementById('playerTools');
+        const mediaInfo = document.getElementById('mediaInfo');
+
+        playerSection.style.display = 'block';
+        playerTools.style.display = 'flex';
+        document.getElementById('playbackSpeed').value = "1";
+
+        const streamUrl = `${currentBaseUrl}/api/stream/${encodeURIComponent(filename)}`;
+        const sizeInfo = mediaFiles.find(m => m.filename === filename)?.sizeFormatted || 'Unknown';
+
+        // Add crossorigin="anonymous" to allow Web Audio API processing
+        if (contentType.startsWith('video/')) {
+            playerContainer.innerHTML = `
+                <video id="mediaPlayer" controls autoplay crossorigin="anonymous" playsinline>
+                    <source src="${streamUrl}" type="${contentType}">
+                    Your browser does not support the video tag.
+                </video>
+            `;
+        } else {
+            playerContainer.innerHTML = `
+                <audio id="mediaPlayer" controls autoplay crossorigin="anonymous">
+                    <source src="${streamUrl}" type="${contentType}">
+                    Your browser does not support the audio tag.
+                </audio>
+            `;
+        }
+
+        const playerEl = document.getElementById('mediaPlayer');
+
+        // Initialize Audio Context on play (browsers require user interaction)
+        playerEl.addEventListener('play', () => {
+            if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+            initAudioProcessor(playerEl);
+        }, { once: true });
+
+        mediaInfo.innerHTML = `
+            <div class="info-row">
+                <i data-lucide="play" style="color: var(--primary);"></i>
+                <strong>Now Playing:</strong> ${escapeHtml(filename)}
+            </div>
+            <div class="info-row">
+                <i data-lucide="hard-drive"></i>
+                <span>File Size: ${sizeInfo}</span>
+            </div>
+            <div class="info-row" style="margin-top: 4px;">
+                <a href="${streamUrl}" download="${filename}">
+                    <i data-lucide="download"></i> Download Original File
+                </a>
+            </div>
+        `;
+
+        lucide.createIcons();
+        playerSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    function loadSavedConfig() {
+        const savedIp = localStorage.getItem('serverIp');
+        const savedPort = localStorage.getItem('serverPort');
+
+        if (savedIp) document.getElementById('serverIp').value = savedIp;
+        if (savedPort) document.getElementById('serverPort').value = savedPort;
+
+        if (savedIp && savedPort) {
+            setTimeout(() => connectToServer(), 300);
+        }
+    }
+
+    loadSavedConfig();
+</script>
+</body>
+</html>
