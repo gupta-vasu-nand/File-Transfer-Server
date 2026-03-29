@@ -1,5 +1,3 @@
-import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
-
 plugins {
     kotlin("jvm") version "2.2.21"
     kotlin("plugin.spring") version "2.2.21"
@@ -21,27 +19,33 @@ repositories {
 }
 
 dependencies {
-    // Core Spring Boot
     implementation("org.springframework.boot:spring-boot-starter-web")
     implementation("org.springframework.boot:spring-boot-starter-validation")
     implementation("org.springframework.boot:spring-boot-starter-actuator")
-
-    // Kotlin support
-    implementation("org.jetbrains.kotlin:kotlin-reflect")
-    implementation("org.jetbrains.kotlin:kotlin-stdlib")
     implementation("com.fasterxml.jackson.module:jackson-module-kotlin")
+    implementation("org.jetbrains.kotlin:kotlin-reflect")
+    implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8")
 
-    // Video/Audio streaming support
-    implementation("org.springframework:spring-web")
-    implementation("jakarta.servlet:jakarta.servlet-api")
+    // File processing
+    implementation("org.apache.tika:tika-core:2.9.2")
+    implementation("org.apache.tika:tika-parsers-standard-package:2.9.2")
+    implementation("net.coobird:thumbnailator:0.4.20")
 
-    // Optional: Thumbnail generation
-    implementation("org.bytedeco:javacv-platform:1.5.9")
+    // Code syntax highlighting
+    implementation("org.fxmisc.richtext:richtextfx:0.11.2")
 
-    // Testing
-    testImplementation("org.springframework.boot:spring-boot-starter-test")
-    testImplementation("org.jetbrains.kotlin:kotlin-test-junit5")
-    testRuntimeOnly("org.junit.platform:junit-platform-launcher")
+    // Audio processing
+    implementation("net.jthink:jaudiotagger:3.0.1")
+
+    // PDF processing
+    implementation("org.apache.pdfbox:pdfbox:3.0.3")
+    implementation("org.apache.poi:poi-ooxml:5.3.0")
+
+    // Video metadata
+    implementation("com.github.kokorin.jaffree:jaffree:2024.08.29")
+
+    // Logging
+    implementation("io.github.microutils:kotlin-logging-jvm:3.0.5")
 }
 
 kotlin {

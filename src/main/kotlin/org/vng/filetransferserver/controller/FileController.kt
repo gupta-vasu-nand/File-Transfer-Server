@@ -1,5 +1,6 @@
 package org.vng.filetransferserver.controller
 
+/*
 import jakarta.servlet.http.HttpServletResponse
 import org.slf4j.LoggerFactory
 import org.springframework.core.io.Resource
@@ -150,3 +151,5 @@ class FileController(
         return ResponseEntity.ok(mediaFiles)
     }
 }
+
+ */

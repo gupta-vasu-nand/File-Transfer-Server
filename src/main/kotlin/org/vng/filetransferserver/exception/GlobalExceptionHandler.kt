@@ -1,112 +1,111 @@
 package org.vng.filetransferserver.exception
 
 import org.vng.filetransferserver.dto.ErrorResponseDTO
-import org.slf4j.LoggerFactory
+import mu.KotlinLogging
+import org.apache.catalina.connector.ClientAbortException
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
-import org.springframework.http.converter.HttpMessageNotReadableException
-import org.springframework.validation.FieldError
-import org.springframework.web.bind.MethodArgumentNotValidException
-import org.springframework.web.bind.annotation.ControllerAdvice
 import org.springframework.web.bind.annotation.ExceptionHandler
-import org.springframework.web.context.request.WebRequest
-import org.springframework.web.multipart.MaxUploadSizeExceededException
+import org.springframework.web.bind.annotation.RestControllerAdvice
+import org.springframework.web.context.request.async.AsyncRequestNotUsableException
 import org.springframework.web.servlet.resource.NoResourceFoundException
+import java.time.LocalDateTime
+import jakarta.servlet.http.HttpServletRequest
+import jakarta.servlet.http.HttpServletResponse
 
-@ControllerAdvice
+private val logger = KotlinLogging.logger {}
+
+@RestControllerAdvice
 class GlobalExceptionHandler {
 
-    private val logger = LoggerFactory.getLogger(GlobalExceptionHandler::class.java)
-
     @ExceptionHandler(FileNotFoundException::class)
-    fun handleFileNotFound(ex: FileNotFoundException, request: WebRequest): ResponseEntity<ErrorResponseDTO> {
-        logger.error("File not found: ${ex.message}")
-        return buildErrorResponse(HttpStatus.NOT_FOUND, ex.message ?: "File not found", request)
+    fun handleFileNotFound(ex: FileNotFoundException, request: HttpServletRequest): ResponseEntity<ErrorResponseDTO> {
+        logger.warn { ex.message }
+        return buildErrorResponse(ex, HttpStatus.NOT_FOUND, request)
     }
 
     @ExceptionHandler(InvalidFileTypeException::class)
-    fun handleInvalidFileType(ex: InvalidFileTypeException, request: WebRequest): ResponseEntity<ErrorResponseDTO> {
-        logger.error("Invalid file type: ${ex.message}")
-        return buildErrorResponse(HttpStatus.BAD_REQUEST, ex.message ?: "Invalid file type", request)
+    fun handleInvalidFileType(ex: InvalidFileTypeException, request: HttpServletRequest): ResponseEntity<ErrorResponseDTO> {
+        logger.warn { ex.message }
+        return buildErrorResponse(ex, HttpStatus.BAD_REQUEST, request)
     }
 
     @ExceptionHandler(FileSizeLimitExceededException::class)
-    fun handleFileSizeLimitExceeded(ex: FileSizeLimitExceededException, request: WebRequest): ResponseEntity<ErrorResponseDTO> {
-        logger.error("File size limit exceeded: ${ex.message}")
-        return buildErrorResponse(HttpStatus.PAYLOAD_TOO_LARGE, ex.message ?: "File size exceeds the maximum allowed limit", request)
-    }
-
-    @ExceptionHandler(MaxUploadSizeExceededException::class)
-    fun handleMaxUploadSizeExceeded(ex: MaxUploadSizeExceededException, request: WebRequest): ResponseEntity<ErrorResponseDTO> {
-        logger.error("Max upload size exceeded: ${ex.message}")
-        val message = "File size exceeds the maximum upload limit (${ex.maxUploadSize / (1024 * 1024)}MB)"
-        return buildErrorResponse(HttpStatus.PAYLOAD_TOO_LARGE, message, request)
+    fun handleFileSizeLimit(ex: FileSizeLimitExceededException, request: HttpServletRequest): ResponseEntity<ErrorResponseDTO> {
+        logger.warn { "File size limit exceeded: ${ex.message}" }
+        return buildErrorResponse(ex, HttpStatus.PAYLOAD_TOO_LARGE, request)
     }
 
     @ExceptionHandler(FileStorageException::class)
-    fun handleFileStorage(ex: FileStorageException, request: WebRequest): ResponseEntity<ErrorResponseDTO> {
-        logger.error("File storage error: ${ex.message}", ex)
-        return buildErrorResponse(HttpStatus.INTERNAL_SERVER_ERROR, ex.message ?: "File storage error", request)
+    fun handleFileStorage(ex: FileStorageException, request: HttpServletRequest): ResponseEntity<ErrorResponseDTO> {
+        logger.error(ex) { "File storage error" }
+        return buildErrorResponse(ex, HttpStatus.INTERNAL_SERVER_ERROR, request)
     }
 
-    @ExceptionHandler(StorageInitializationException::class)
-    fun handleStorageInitialization(ex: StorageInitializationException, request: WebRequest): ResponseEntity<ErrorResponseDTO> {
-        logger.error("Storage initialization error: ${ex.message}", ex)
-        return buildErrorResponse(HttpStatus.INTERNAL_SERVER_ERROR, ex.message ?: "Storage initialization failed", request)
+    @ExceptionHandler(DirectoryOperationException::class)
+    fun handleDirectoryOperation(ex: DirectoryOperationException, request: HttpServletRequest): ResponseEntity<ErrorResponseDTO> {
+        logger.warn { ex.message }
+        return buildErrorResponse(ex, HttpStatus.BAD_REQUEST, request)
     }
 
-    @ExceptionHandler(MethodArgumentNotValidException::class)
-    fun handleValidationExceptions(ex: MethodArgumentNotValidException, request: WebRequest): ResponseEntity<ErrorResponseDTO> {
-        logger.error("Validation error: ${ex.message}")
-        val errors = ex.bindingResult.allErrors.associate {
-            when (it) {
-                is FieldError -> it.field to (it.defaultMessage ?: "Invalid value")
-                else -> it.objectName to (it.defaultMessage ?: "Invalid value")
-            }
+    // Handle client abort during streaming - don't return JSON error
+    @ExceptionHandler(ClientAbortException::class)
+    fun handleClientAbort(ex: ClientAbortException, response: HttpServletResponse) {
+        logger.debug { "Client aborted connection: ${ex.message}" }
+        // Don't write any response as client is already disconnected
+        if (!response.isCommitted) {
+            response.setStatus(499) // Client Closed Request
         }
-        val message = "Validation failed: $errors"
-        return buildErrorResponse(HttpStatus.BAD_REQUEST, message, request)
     }
 
-    @ExceptionHandler(HttpMessageNotReadableException::class)
-    fun handleHttpMessageNotReadable(ex: HttpMessageNotReadableException, request: WebRequest): ResponseEntity<ErrorResponseDTO> {
-        logger.error("Malformed JSON request: ${ex.message}")
-        return buildErrorResponse(HttpStatus.BAD_REQUEST, "Malformed request body", request)
+    // Handle async request not usable (client disconnected during streaming)
+    @ExceptionHandler(AsyncRequestNotUsableException::class)
+    fun handleAsyncRequestNotUsable(ex: AsyncRequestNotUsableException, response: HttpServletResponse) {
+        logger.debug { "Async request not usable (client likely disconnected): ${ex.message}" }
+        if (!response.isCommitted) {
+            response.setStatus(499)
+        }
     }
 
+    // Handle favicon.ico not found - just log debug
     @ExceptionHandler(NoResourceFoundException::class)
-    fun handleNoResourceFound(ex: NoResourceFoundException, request: WebRequest): ResponseEntity<ErrorResponseDTO> {
-        logger.error("Resource not found: ${ex.message}")
-        return buildErrorResponse(HttpStatus.NOT_FOUND, "Resource not found", request)
-    }
-
-    @ExceptionHandler(IllegalArgumentException::class)
-    fun handleIllegalArgument(ex: IllegalArgumentException, request: WebRequest): ResponseEntity<ErrorResponseDTO> {
-        logger.error("Illegal argument: ${ex.message}")
-        return buildErrorResponse(HttpStatus.BAD_REQUEST, ex.message ?: "Invalid request parameter", request)
+    fun handleNoResourceFound(ex: NoResourceFoundException, response: HttpServletResponse) {
+        if (ex.message?.contains("favicon.ico") == true) {
+            logger.debug { "Favicon not found" }
+            response.setStatus(HttpStatus.NOT_FOUND.value())
+        } else {
+            logger.warn { "Resource not found: ${ex.message}" }
+            response.setStatus(HttpStatus.NOT_FOUND.value())
+        }
     }
 
     @ExceptionHandler(Exception::class)
-    fun handleGenericException(ex: Exception, request: WebRequest): ResponseEntity<ErrorResponseDTO> {
-        logger.error("Unexpected error: ${ex.message}", ex)
-        return buildErrorResponse(
-            HttpStatus.INTERNAL_SERVER_ERROR,
-            "An unexpected error occurred. Please try again later.",
-            request
-        )
+    fun handleGeneric(ex: Exception, request: HttpServletRequest, response: HttpServletResponse): ResponseEntity<ErrorResponseDTO>? {
+        // Don't try to return JSON for media streaming endpoints that expect binary content
+        val path = request.requestURI
+        if (path.contains("/api/stream") || path.contains("/api/preview") || path.contains("/api/thumbnail")) {
+            logger.error(ex) { "Error during streaming for path: $path" }
+            if (!response.isCommitted) {
+                response.setStatus(HttpStatus.INTERNAL_SERVER_ERROR.value())
+            }
+            return null
+        }
+
+        logger.error(ex) { "Unexpected error" }
+        return buildErrorResponse(ex, HttpStatus.INTERNAL_SERVER_ERROR, request)
     }
 
     private fun buildErrorResponse(
+        ex: Exception,
         status: HttpStatus,
-        message: String,
-        request: WebRequest
+        request: HttpServletRequest
     ): ResponseEntity<ErrorResponseDTO> {
         val errorResponse = ErrorResponseDTO(
-            timestamp = java.time.LocalDateTime.now(),
+            timestamp = LocalDateTime.now(),
             status = status.value(),
             error = status.reasonPhrase,
-            message = message,
-            path = request.getDescription(false).replace("uri=", "")
+            message = ex.message ?: "An error occurred",
+            path = request.requestURI
         )
         return ResponseEntity.status(status).body(errorResponse)
     }

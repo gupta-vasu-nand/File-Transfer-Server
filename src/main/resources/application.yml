@@ -5,61 +5,60 @@ server:
     max-swallow-size: -1
     max-http-form-post-size: -1
     connection-timeout: 5m
+    max-connections: 1000
+    accept-count: 100
+  compression:
+    enabled: true
+    mime-types: application/javascript,text/css,text/html,application/json
+    min-response-size: 2048
 
 spring:
-  application:
-    name: file-transfer-server
   servlet:
     multipart:
       enabled: true
       max-file-size: ${FILE_MAX_SIZE:1GB}
       max-request-size: ${FILE_MAX_SIZE:1GB}
-      file-size-threshold: 2KB
-      location: ${java.io.tmpdir}
+      file-size-threshold: 2MB
+      location: /tmp
   web:
     resources:
       static-locations: classpath:/static/
       add-mappings: true
+      cache:
+        period: 3600
+  jackson:
+    serialization:
+      # Remove write-dates-as-timestamps as it's not valid in newer Jackson versions
+      # Use the correct enum values
+      INDENT_OUTPUT: false
+      FAIL_ON_EMPTY_BEANS: false
+      WRAP_ROOT_VALUE: false
+    deserialization:
+      FAIL_ON_UNKNOWN_PROPERTIES: false
+    default-property-inclusion: non_null
 
-# File storage configuration
+  mvc:
+    favicon:
+      enabled: false
+
 file:
-  # Use environment variable with Windows path fallback
   storage:
     path: ${FILE_STORAGE_PATH:C:/Users/Vasu/Downloads/Telegram Desktop}
-  max-size: ${FILE_MAX_SIZE:1073741824} # 1GB in bytes
-  allowed-extensions: ${ALLOWED_EXTENSIONS:*} # * for all
+  max-size: ${FILE_MAX_SIZE:1073741824}
+  allowed-extensions: ${ALLOWED_EXTENSIONS:*}
+  thumbnail:
+    size: 200x200
+    quality: 0.8
 
-# Logging configuration
 logging:
   level:
     root: INFO
-    org.vng.filetransferserver: DEBUG
+    com.filetransferserver: DEBUG
     org.springframework.web: INFO
   file:
     name: ./logs/file-transfer-server.log
-  logback:
-    rollingpolicy:
-      max-file-size: 10MB
-      max-history: 30
-      total-size-cap: 1GB
-
-# Management endpoints
-management:
-  endpoints:
-    web:
-      exposure:
-        include: health,info,metrics
-  endpoint:
-    health:
-      show-details: always
-
-# OpenAPI/Swagger configuration (disable if having issues)
-springdoc:
-  api-docs:
-    enabled: ${SWAGGER_ENABLED:false}
-    path: /api-docs
-  swagger-ui:
-    enabled: ${SWAGGER_ENABLED:false}
-    path: /swagger-ui.html
-    operationsSorter: method
-  show-actuator: true
+    max-size: 10MB
+    max-history: 30
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} - %msg%n"
+    file: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"

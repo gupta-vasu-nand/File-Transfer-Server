@@ -1,257 +1,292 @@
 package org.vng.filetransferserver.service.impl
 
-import org.slf4j.LoggerFactory
-import org.springframework.core.io.InputStreamResource
-import org.springframework.stereotype.Service
-import org.vng.filetransferserver.config.StorageConfig
+import org.vng.filetransferserver.dto.MediaInfoDTO
 import org.vng.filetransferserver.exception.FileNotFoundException
-import org.vng.filetransferserver.exception.FileStorageException
-import org.vng.filetransferserver.service.MediaInfoDTO
-import org.vng.filetransferserver.service.MediaMetadata
-import org.vng.filetransferserver.service.StreamResponse
 import org.vng.filetransferserver.service.StreamingService
 import org.vng.filetransferserver.util.FileUtils
-import java.io.IOException
+import mu.KotlinLogging
+import org.springframework.beans.factory.annotation.Qualifier
+import org.springframework.core.io.FileSystemResource
+import org.springframework.core.io.Resource
+import org.springframework.http.HttpHeaders
+import org.springframework.http.HttpStatus
+import org.springframework.http.ResponseEntity
+import org.springframework.stereotype.Service
+import java.io.File
 import java.io.InputStream
 import java.nio.file.Files
 import java.nio.file.Path
+import jakarta.servlet.http.HttpServletRequest
+
+private val logger = KotlinLogging.logger {}
 
 @Service
 class StreamingServiceImpl(
-    private val storageConfig: StorageConfig,
-    private val fileUtils: FileUtils
+    @Qualifier("storageDirectory") private val storagePath: Path
 ) : StreamingService {
 
-    private val logger = LoggerFactory.getLogger(StreamingServiceImpl::class.java)
-
-    companion object {
-        private val BUFFER_SIZE = 8192 // 8KB buffer for streaming
-    }
-
-    override fun streamMedia(filename: String, rangeHeader: String?): StreamResponse {
-        val sanitizedFilename = fileUtils.sanitizeFilename(filename)
-        val filePath = storageConfig.getStoragePath().resolve(sanitizedFilename)
-
-        if (!Files.exists(filePath) || !Files.isRegularFile(filePath)) {
-            logger.warn("Media file not found: $sanitizedFilename")
-            throw FileNotFoundException("Media file not found: $filename")
-        }
-
-        val contentType = detectContentType(filePath, filename) ?: "application/octet-stream"
-        val fileSize = Files.size(filePath)
-
-        return if (rangeHeader != null && rangeHeader.startsWith("bytes=")) {
-            handleRangeRequest(filePath, contentType, fileSize, rangeHeader)
-        } else {
-            handleFullRequest(filePath, contentType, fileSize)
-        }
-    }
-
-    private fun handleRangeRequest(
-        filePath: Path,
-        contentType: String,
-        fileSize: Long,
-        rangeHeader: String
-    ): StreamResponse {
+    override fun streamMedia(filename: String, request: HttpServletRequest): ResponseEntity<Resource> {
         try {
-            val range = parseRange(rangeHeader, fileSize)
-            val inputStream = Files.newInputStream(filePath)
-            inputStream.skip(range.start)
+            val file = findFile(filename)
+            val resource = FileSystemResource(file)
+            val contentType = determineContentType(file)
+            val fileSize = file.length()
 
-            // Create a custom InputStreamResource that handles disconnections
-            val resource = object : InputStreamResource(inputStream) {
-                override fun getInputStream(): InputStream {
-                    return inputStream
-                }
-
-                override fun contentLength(): Long {
-                    return range.end - range.start + 1
-                }
+            // Check if it's an image - serve directly without range support
+            if (contentType.startsWith("image/")) {
+                return ResponseEntity.ok()
+                    .header(HttpHeaders.CONTENT_TYPE, contentType)
+                    .header(HttpHeaders.CONTENT_LENGTH, fileSize.toString())
+                    .header(HttpHeaders.CACHE_CONTROL, "max-age=3600")
+                    .body(resource)
             }
 
-            logger.info("Streaming range ${range.start}-${range.end} of ${filePath.fileName}")
+            val rangeHeader = request.getHeader("Range")
 
-            return StreamResponse(
-                resource = resource,
-                contentType = contentType,
-                contentLength = range.end - range.start + 1,
-                rangeStart = range.start,
-                rangeEnd = range.end,
-                totalSize = fileSize
-            )
-        } catch (e: IOException) {
-            if (e.message?.contains("aborted") == true || e.message?.contains("broken pipe") == true) {
-                logger.warn("Client disconnected during streaming: ${e.message}")
-                // Rethrow as a specific exception that won't trigger error response
-                throw ClientDisconnectedException("Client disconnected", e)
+            if (rangeHeader == null) {
+                // Return full file
+                return ResponseEntity.ok()
+                    .header(HttpHeaders.CONTENT_TYPE, contentType)
+                    .header(HttpHeaders.CONTENT_LENGTH, fileSize.toString())
+                    .header(HttpHeaders.ACCEPT_RANGES, "bytes")
+                    .header(HttpHeaders.CACHE_CONTROL, "no-cache")
+                    .body(resource)
             }
-            logger.error("Failed to stream media: ${e.message}", e)
-            throw FileStorageException("Failed to stream media: ${e.message}", e)
+
+            // Parse range header
+            val range = parseRangeHeader(rangeHeader, fileSize)
+            val start = range.first
+            val end = range.second
+            val contentLength = end - start + 1
+
+            logger.debug { "Streaming range: $start-$end of $fileSize for ${file.name}" }
+
+            val headers = HttpHeaders()
+            headers.add(HttpHeaders.CONTENT_TYPE, contentType)
+            headers.add(HttpHeaders.CONTENT_RANGE, "bytes $start-$end/$fileSize")
+            headers.add(HttpHeaders.CONTENT_LENGTH, contentLength.toString())
+            headers.add(HttpHeaders.ACCEPT_RANGES, "bytes")
+            headers.add(HttpHeaders.CACHE_CONTROL, "no-cache")
+
+            return ResponseEntity
+                .status(HttpStatus.PARTIAL_CONTENT)
+                .headers(headers)
+                .body(createPartialResource(resource, start, end))
+
+        } catch (e: FileNotFoundException) {
+            throw e
+        } catch (e: Exception) {
+            logger.error(e) { "Error streaming file: $filename" }
+            throw e
         }
-    }
-
-    private fun handleFullRequest(
-        filePath: Path,
-        contentType: String,
-        fileSize: Long
-    ): StreamResponse {
-        try {
-            val inputStream: InputStream = Files.newInputStream(filePath)
-            val resource = object : InputStreamResource(inputStream) {
-                override fun getInputStream(): InputStream {
-                    return inputStream
-                }
-            }
-
-            logger.info("Streaming full file: ${filePath.fileName}")
-
-            return StreamResponse(
-                resource = resource,
-                contentType = contentType,
-                contentLength = fileSize,
-                rangeStart = 0,
-                rangeEnd = fileSize - 1,
-                totalSize = fileSize
-            )
-        } catch (e: IOException) {
-            if (e.message?.contains("aborted") == true || e.message?.contains("broken pipe") == true) {
-                logger.warn("Client disconnected during streaming: ${e.message}")
-                throw ClientDisconnectedException("Client disconnected", e)
-            }
-            logger.error("Failed to stream media: ${e.message}", e)
-            throw FileStorageException("Failed to stream media: ${e.message}", e)
-        }
-    }
-
-    override fun getMediaMetadata(filename: String): MediaMetadata {
-        val sanitizedFilename = fileUtils.sanitizeFilename(filename)
-        val filePath = storageConfig.getStoragePath().resolve(sanitizedFilename)
-
-        if (!Files.exists(filePath) || !Files.isRegularFile(filePath)) {
-            throw FileNotFoundException("Media file not found: $filename")
-        }
-
-        val contentType = detectContentType(filePath, filename) ?: "application/octet-stream"
-        val size = Files.size(filePath)
-
-        return MediaMetadata(
-            filename = sanitizedFilename,
-            contentType = contentType,
-            size = size,
-            supportsRange = true
-        )
     }
 
     override fun getMediaInfo(filename: String): MediaInfoDTO {
-        val sanitizedFilename = fileUtils.sanitizeFilename(filename)
-        val filePath = storageConfig.getStoragePath().resolve(sanitizedFilename)
-
-        if (!Files.exists(filePath) || !Files.isRegularFile(filePath)) {
-            throw FileNotFoundException("Media file not found: $filename")
-        }
-
-        val contentType = detectContentType(filePath, filename) ?: "application/octet-stream"
-        val size = Files.size(filePath)
-
-        // Extract title from filename (remove extension)
-        val title = sanitizedFilename.substringBeforeLast(".")
-
-        // Detect media type
-        val isVideo = contentType.startsWith("video/")
-
-        // Calculate bitrate approximation
-        val bitrate = if (isVideo) {
-            (size * 8) / 1024 // Kbps approximation
-        } else null
-
-        // Extract resolution from filename if possible
-        val resolution = when {
-            sanitizedFilename.contains("1080p") -> "1920x1080"
-            sanitizedFilename.contains("720p") -> "1280x720"
-            sanitizedFilename.contains("480p") -> "854x480"
-            else -> null
-        }
-
-        // Detect codecs from filename
-        val (videoCodec, audioCodec) = detectCodecsFromFilename(sanitizedFilename)
+        val file = findFile(filename)
+        val relativePath = storagePath.relativize(file.toPath()).toString()
 
         return MediaInfoDTO(
-            filename = sanitizedFilename,
-            title = title,
+            filename = file.name,
+            title = file.nameWithoutExtension,
+            path = relativePath,
+            parentFolder = file.parentFile?.name ?: "",
+            folderPath = if (file.parentFile == storagePath.toFile()) ""
+            else storagePath.relativize(file.parentFile?.toPath() ?: storagePath).toString(),
+            size = file.length(),
+            sizeFormatted = FileUtils.formatFileSize(file.length()),
+            contentType = determineContentType(file),
+            lastModified = java.time.Instant.ofEpochMilli(file.lastModified()),
             duration = null,
-            size = size,
-            sizeFormatted = fileUtils.formatFileSize(size),
-            contentType = contentType,
-            bitrate = bitrate,
-            resolution = resolution,
-            thumbnail = null,
-            videoCodec = videoCodec,
-            audioCodec = audioCodec,
-            audioChannels = null,
-            hasAudio = audioCodec != null
+            bitrate = null,
+            resolution = FileUtils.detectResolution(file.name),
+            videoCodec = null,
+            audioCodec = null,
+            hasAudio = true,
+            streamUrl = "/api/stream/$relativePath",
+            downloadUrl = "/api/files/$relativePath"
         )
     }
 
-    private fun detectContentType(filePath: Path, filename: String): String? {
-        val extension = filename.substringAfterLast(".").lowercase()
+    override fun getThumbnail(filename: String): Resource? {
+        try {
+            val file = findFile(filename)
+            val contentType = determineContentType(file)
 
-        val mimeTypes = mapOf(
-            "mp4" to "video/mp4",
-            "mkv" to "video/x-matroska",
-            "avi" to "video/x-msvideo",
-            "mov" to "video/quicktime",
-            "webm" to "video/webm",
-            "mp3" to "audio/mpeg",
-            "m4a" to "audio/mp4",
-            "wav" to "audio/wav",
-            "flac" to "audio/flac",
-            "ogg" to "audio/ogg"
-        )
+            // For images, return the image itself as thumbnail
+            if (contentType.startsWith("image/")) {
+                return FileSystemResource(file)
+            }
 
-        return mimeTypes[extension] ?: Files.probeContentType(filePath)
+            return null
+        } catch (e: Exception) {
+            logger.debug { "Could not generate thumbnail for: $filename" }
+            return null
+        }
     }
 
-    private fun detectCodecsFromFilename(filename: String): Pair<String?, String?> {
-        var videoCodec: String? = null
-        var audioCodec: String? = null
+    override fun getPreview(filename: String): Resource? {
+        try {
+            val file = findFile(filename)
+            val contentType = determineContentType(file)
 
-        val lowerFilename = filename.lowercase()
+            // Preview for images
+            if (contentType.startsWith("image/")) {
+                return FileSystemResource(file)
+            }
 
-        when {
-            lowerFilename.contains("h265") || lowerFilename.contains("hevc") -> videoCodec = "H.265/HEVC"
-            lowerFilename.contains("h264") || lowerFilename.contains("x264") -> videoCodec = "H.264"
-            lowerFilename.contains("vp9") -> videoCodec = "VP9"
-            lowerFilename.contains("vp8") -> videoCodec = "VP8"
+            // Preview for text-based files
+            if (contentType.startsWith("text/") ||
+                contentType == "application/json" ||
+                contentType == "application/xml" ||
+                FileUtils.getFileTypeCategory(filename) == "code") {
+                return FileSystemResource(file)
+            }
+
+            // For PDFs
+            if (contentType == "application/pdf") {
+                return FileSystemResource(file)
+            }
+
+            return null
+        } catch (e: Exception) {
+            logger.debug { "Could not generate preview for: $filename" }
+            return null
         }
-
-        when {
-            lowerFilename.contains("aac") -> audioCodec = "AAC"
-            lowerFilename.contains("mp3") -> audioCodec = "MP3"
-            lowerFilename.contains("ac3") || lowerFilename.contains("ac-3") -> audioCodec = "AC-3"
-            lowerFilename.contains("eac3") -> audioCodec = "E-AC-3"
-            lowerFilename.contains("dts") -> audioCodec = "DTS"
-            lowerFilename.contains("opus") -> audioCodec = "Opus"
-        }
-
-        return Pair(videoCodec, audioCodec)
     }
 
-    private fun parseRange(rangeHeader: String, fileSize: Long): Range {
-        val bytesRange = rangeHeader.substringAfter("bytes=")
-        val parts = bytesRange.split("-")
+    private fun findFile(filename: String): File {
+        val decodedFilename = java.net.URLDecoder.decode(filename, "UTF-8")
 
-        val start = if (parts[0].isNotEmpty()) parts[0].toLong() else 0
-        val end = if (parts.size > 1 && parts[1].isNotEmpty()) {
-            parts[1].toLong().coerceAtMost(fileSize - 1)
-        } else {
-            fileSize - 1
+        // 1. Try to resolve the path exactly as requested
+        var file = storagePath.resolve(decodedFilename).normalize().toFile()
+
+        // 2. If not found, check categorized subfolders (Audio, Videos, etc.)
+        if (!file.exists()) {
+            // Logic from your FileServiceImpl to determine the folder
+            val extension = decodedFilename.substringAfterLast(".", "").lowercase()
+            val typeFolder = when (".$extension") {
+                in listOf(".mp4", ".webm", ".mkv", ".avi", ".mov", ".mpeg", ".flv", ".m4v") -> "Videos"
+                in listOf(".mp3", ".wav", ".flac", ".aac", ".ogg", ".m4a") -> "Audio"
+                in listOf(".jpg", ".jpeg", ".png", ".gif", ".webp", ".svg", ".bmp") -> "Images"
+                in listOf(".pdf", ".doc", ".docx", ".xls", ".xlsx", ".ppt", ".pptx") -> "Documents"
+                else -> null
+            }
+
+            if (typeFolder != null) {
+                val categorizedFile = storagePath.resolve(typeFolder).resolve(decodedFilename).normalize().toFile()
+                if (categorizedFile.exists()) {
+                    file = categorizedFile
+                }
+            }
         }
 
-        return Range(start, end)
+        if (!file.exists() || !file.isFile) {
+            throw FileNotFoundException("File not found: $filename")
+        }
+
+        // Security check
+        if (!file.absolutePath.startsWith(storagePath.toAbsolutePath().toString())) {
+            throw SecurityException("Path traversal detected")
+        }
+
+        return file
     }
 
-    private data class Range(val start: Long, val end: Long)
+    private fun determineContentType(file: File): String {
+        val fileName = file.name.lowercase()
+        return when {
+            fileName.endsWith(".mp4") -> "video/mp4"
+            fileName.endsWith(".webm") -> "video/webm"
+            fileName.endsWith(".mkv") -> "video/x-matroska"
+            fileName.endsWith(".avi") -> "video/x-msvideo"
+            fileName.endsWith(".mov") -> "video/quicktime"
+            fileName.endsWith(".mp3") -> "audio/mpeg"
+            fileName.endsWith(".wav") -> "audio/wav"
+            fileName.endsWith(".flac") -> "audio/flac"
+            fileName.endsWith(".aac") -> "audio/aac"
+            fileName.endsWith(".ogg") -> "audio/ogg"
+            fileName.endsWith(".m4a") -> "audio/mp4"
+            fileName.endsWith(".jpg") || fileName.endsWith(".jpeg") -> "image/jpeg"
+            fileName.endsWith(".png") -> "image/png"
+            fileName.endsWith(".gif") -> "image/gif"
+            fileName.endsWith(".webp") -> "image/webp"
+            fileName.endsWith(".bmp") -> "image/bmp"
+            fileName.endsWith(".svg") -> "image/svg+xml"
+            fileName.endsWith(".pdf") -> "application/pdf"
+            fileName.endsWith(".txt") -> "text/plain"
+            fileName.endsWith(".html") -> "text/html"
+            fileName.endsWith(".css") -> "text/css"
+            fileName.endsWith(".js") -> "application/javascript"
+            fileName.endsWith(".json") -> "application/json"
+            fileName.endsWith(".xml") -> "application/xml"
+            else -> {
+                val mimeType = Files.probeContentType(file.toPath())
+                mimeType ?: "application/octet-stream"
+            }
+        }
+    }
+
+    private fun parseRangeHeader(rangeHeader: String, fileSize: Long): Pair<Long, Long> {
+        // Format: "bytes=start-end"
+        val rangePattern = Regex("bytes=(\\d*)-(\\d*)")
+        val matchResult = rangePattern.find(rangeHeader)
+
+        if (matchResult != null) {
+            val startStr = matchResult.groupValues[1]
+            val endStr = matchResult.groupValues[2]
+
+            val start = if (startStr.isNotEmpty()) startStr.toLong() else 0L
+            val end = if (endStr.isNotEmpty()) endStr.toLong() else fileSize - 1
+
+            // Validate range bounds
+            val validStart = start.coerceIn(0, fileSize - 1)
+            val validEnd = end.coerceIn(validStart, fileSize - 1)
+
+            return Pair(validStart, validEnd)
+        }
+
+        return Pair(0, fileSize - 1)
+    }
+
+    private fun createPartialResource(resource: Resource, start: Long, end: Long): Resource {
+        return object : Resource {
+            override fun getInputStream(): InputStream {
+                val inputStream = resource.inputStream
+                // Skip to start position
+                var bytesToSkip = start
+                while (bytesToSkip > 0) {
+                    val skipped = inputStream.skip(bytesToSkip)
+                    if (skipped <= 0) break
+                    bytesToSkip -= skipped
+                }
+                return inputStream
+            }
+
+            override fun exists(): Boolean = resource.exists()
+            override fun isReadable(): Boolean = resource.isReadable
+            override fun isOpen(): Boolean = resource.isOpen
+            override fun getURL(): java.net.URL = resource.url
+            override fun getURI(): java.net.URI = resource.uri
+            override fun getFile(): File = resource.file
+            override fun contentLength(): Long = end - start + 1
+            override fun lastModified(): Long = resource.lastModified()
+
+            override fun createRelative(relativePath: String): Resource {
+                // Create a new resource relative to the current resource's parent
+                val currentFile = resource.file
+                val parentDir = currentFile.parentFile
+                if (parentDir != null) {
+                    val relativeFile = File(parentDir, relativePath)
+                    if (relativeFile.exists()) {
+                        return FileSystemResource(relativeFile)
+                    }
+                }
+                // Fallback: return the original resource
+                return resource
+            }
+
+            override fun getFilename(): String? = resource.filename
+            override fun getDescription(): String = "Partial content from ${resource.description}"
+        }
+    }
 }
-
-// Custom exception for client disconnection
-class ClientDisconnectedException(message: String, cause: Throwable? = null) : RuntimeException(message, cause)
