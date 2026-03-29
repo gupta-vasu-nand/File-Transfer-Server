@@ -127,3 +127,22 @@
 2026-03-30 01:28:35.471 [http-nio-0.0.0.0-9090-exec-8] WARN  o.v.f.e.GlobalExceptionHandler - File not found: File not found: AudioShowstopper JERRY (320K)_20260329_024349_2f1579a3.mp3
 2026-03-30 01:31:13.465 [SpringApplicationShutdownHook] INFO  o.s.boot.tomcat.GracefulShutdown - Commencing graceful shutdown. Waiting for active requests to complete
 2026-03-30 01:31:13.581 [tomcat-shutdown] INFO  o.s.boot.tomcat.GracefulShutdown - Graceful shutdown complete
+2026-03-30 01:31:17.069 [main] INFO  o.v.f.FileTransferServerApplicationKt - Starting FileTransferServerApplicationKt using Java 17.0.12 with PID 25656 (C:\Users\Vasu\IntelliJ IDEA\File-Transfer-Server\build\classes\kotlin\main started by Vasu in C:\Users\Vasu\IntelliJ IDEA\File-Transfer-Server)
+2026-03-30 01:31:17.071 [main] INFO  o.v.f.FileTransferServerApplicationKt - No active profile set, falling back to 1 default profile: "default"
+2026-03-30 01:31:17.234 [background-preinit] INFO  o.h.validator.internal.util.Version - HV000001: Hibernate Validator 9.0.1.Final
+2026-03-30 01:31:18.498 [main] INFO  o.s.boot.tomcat.TomcatWebServer - Tomcat initialized with port 9090 (http)
+2026-03-30 01:31:18.508 [main] INFO  o.a.coyote.http11.Http11NioProtocol - Initializing ProtocolHandler ["http-nio-0.0.0.0-9090"]
+2026-03-30 01:31:18.509 [main] INFO  o.a.catalina.core.StandardService - Starting service [Tomcat]
+2026-03-30 01:31:18.509 [main] INFO  o.a.catalina.core.StandardEngine - Starting Servlet engine: [Apache Tomcat/11.0.20]
+2026-03-30 01:31:18.581 [main] INFO  o.s.b.w.c.s.WebApplicationContextInitializer - Root WebApplicationContext: initialization completed in 1457 ms
+2026-03-30 01:31:18.727 [main] INFO  o.v.f.config.StorageConfig - Storage directory configured: C:\Users\Vasu\Downloads\Telegram Desktop
+2026-03-30 01:31:18.916 [main] INFO  o.s.b.w.a.WelcomePageHandlerMapping - Adding welcome page: class path resource [static/index.html]
+2026-03-30 01:31:19.319 [main] INFO  o.s.b.a.e.web.EndpointLinksResolver - Exposing 1 endpoint beneath base path '/actuator'
+2026-03-30 01:31:19.376 [main] INFO  o.a.coyote.http11.Http11NioProtocol - Starting ProtocolHandler ["http-nio-0.0.0.0-9090"]
+2026-03-30 01:31:19.405 [main] INFO  o.s.boot.tomcat.TomcatWebServer - Tomcat started on port 9090 (http) with context path '/'
+2026-03-30 01:31:19.414 [main] INFO  o.v.f.FileTransferServerApplicationKt - Started FileTransferServerApplicationKt in 2.932 seconds (process running for 3.45)
+2026-03-30 01:31:19.787 [RMI TCP Connection(3)-172.19.20.91] INFO  o.a.c.c.C.[Tomcat].[localhost].[/] - Initializing Spring DispatcherServlet 'dispatcherServlet'
+2026-03-30 01:31:19.788 [RMI TCP Connection(3)-172.19.20.91] INFO  o.s.web.servlet.DispatcherServlet - Initializing Servlet 'dispatcherServlet'
+2026-03-30 01:31:19.790 [RMI TCP Connection(3)-172.19.20.91] INFO  o.s.web.servlet.DispatcherServlet - Completed initialization in 2 ms
+2026-03-30 01:33:12.486 [http-nio-0.0.0.0-9090-exec-9] WARN  o.v.f.e.GlobalExceptionHandler - Resource not found: No static resource .well-known/appspecific/com.chrome.devtools.json for request '/.well-known/appspecific/com.chrome.devtools.json'.
+2026-03-30 01:34:39.467 [http-nio-0.0.0.0-9090-exec-9] WARN  o.v.f.e.GlobalExceptionHandler - Resource not found: No static resource .well-known/appspecific/com.chrome.devtools.json for request '/.well-known/appspecific/com.chrome.devtools.json'.
