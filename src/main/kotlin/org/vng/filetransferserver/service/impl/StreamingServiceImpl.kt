@@ -50,11 +50,18 @@ class StreamingServiceImpl(
 
         val file = targetFile.toFile()
         val fileSize = file.length()
+
+        // Handle empty file case
+        if (fileSize == 0L) {
+            logger.warn { "Attempted to stream empty file: $path" }
+            response.status = HttpStatus.NO_CONTENT.value()
+            return
+        }
+
         val contentType = tika.detect(targetFile)
 
         // Parse Range header
         val rangeHeader = request.getHeader("Range")
-        val (start, end) = parseRange(rangeHeader, fileSize)
 
         try {
             response.setHeader(HttpHeaders.CONTENT_TYPE, contentType)
@@ -62,149 +69,163 @@ class StreamingServiceImpl(
 
             if (rangeHeader == null) {
                 // Return full file
-                response.setHeader(HttpHeaders.CONTENT_LENGTH, fileSize.toString())
-                response.status = HttpStatus.OK.value()
-
-                file.inputStream().use { input ->
-                    val buffer = ByteArray(8192)
-                    var bytesRead: Int
-                    var totalWritten = 0L
-                    try {
-                        while (input.read(buffer).also { bytesRead = it } != -1) {
-                            try {
-                                response.outputStream.write(buffer, 0, bytesRead)
-                                totalWritten += bytesRead
-                                // Flush periodically but catch disconnects
-                                if (totalWritten % (8192 * 10) == 0L) {
-                                    try {
-                                        response.outputStream.flush()
-                                    } catch (e: IOException) {
-                                        if (isClientDisconnect(e)) {
-                                            logger.debug { "Client disconnected during flush at ${totalWritten}/${fileSize} bytes" }
-                                            return
-                                        }
-                                        throw e
-                                    }
-                                }
-                            } catch (e: IOException) {
-                                if (isClientDisconnect(e)) {
-                                    logger.debug { "Client disconnected during write at ${totalWritten}/${fileSize} bytes" }
-                                    return
-                                }
-                                throw e
-                            }
-                        }
-                        // Final flush
-                        try {
-                            response.outputStream.flush()
-                        } catch (e: IOException) {
-                            if (isClientDisconnect(e)) {
-                                logger.debug { "Client disconnected during final flush" }
-                                return
-                            }
-                            throw e
-                        }
-                    } catch (e: IOException) {
-                        if (isClientDisconnect(e)) {
-                            logger.debug { "Client disconnected during streaming: $path" }
-                            return
-                        }
-                        throw e
-                    }
-                }
-                logger.debug { "Stream completed: $path, total: $fileSize bytes" }
+                streamFullFile(file, fileSize, response, path)
             } else {
                 // Return partial content
-                val contentLength = end - start + 1
-                response.setHeader(HttpHeaders.CONTENT_LENGTH, contentLength.toString())
-                response.setHeader(HttpHeaders.CONTENT_RANGE, "bytes $start-$end/$fileSize")
-                response.status = HttpStatus.PARTIAL_CONTENT.value()
-
-                RandomAccessFile(file, "r").use { raf ->
-                    raf.seek(start)
-                    val buffer = ByteArray(8192)
-                    var bytesRead: Int
-                    var bytesRemaining = contentLength
-                    var totalWritten = 0L
-
-                    try {
-                        while (bytesRemaining > 0 && raf.filePointer < fileSize) {
-                            val readSize = minOf(buffer.size, bytesRemaining.toInt())
-                            bytesRead = raf.read(buffer, 0, readSize)
-                            if (bytesRead == -1) break
-
-                            try {
-                                response.outputStream.write(buffer, 0, bytesRead)
-                                totalWritten += bytesRead
-                                bytesRemaining -= bytesRead
-
-                                // Flush periodically
-                                if (totalWritten % (8192 * 10) == 0L) {
-                                    try {
-                                        response.outputStream.flush()
-                                    } catch (e: IOException) {
-                                        if (isClientDisconnect(e)) {
-                                            logger.debug { "Client disconnected during partial flush at ${totalWritten}/${contentLength} bytes" }
-                                            return
-                                        }
-                                        throw e
-                                    }
-                                }
-                            } catch (e: IOException) {
-                                if (isClientDisconnect(e)) {
-                                    logger.debug { "Client disconnected during partial write at ${totalWritten}/${contentLength} bytes" }
-                                    return
-                                }
-                                throw e
-                            }
-                        }
-                        // Final flush
-                        try {
-                            response.outputStream.flush()
-                        } catch (e: IOException) {
-                            if (isClientDisconnect(e)) {
-                                logger.debug { "Client disconnected during final partial flush" }
-                                return
-                            }
-                            throw e
-                        }
-                    } catch (e: IOException) {
-                        if (isClientDisconnect(e)) {
-                            logger.debug { "Client disconnected during partial streaming: $path" }
-                            return
-                        }
-                        throw e
-                    }
-                    logger.debug { "Partial stream completed: $path, range: $rangeHeader, sent: $totalWritten bytes" }
-                }
+                streamPartialFile(file, fileSize, rangeHeader, response, path)
             }
         } catch (e: IOException) {
             if (isClientDisconnect(e)) {
-                logger.debug { "Client disconnected during streaming setup: $path" }
+                logger.debug { "Client disconnected during streaming: $path" }
                 return
             }
             logger.error(e) { "Error streaming file: $path" }
-            // Only try to send error if response is still usable
             if (!response.isCommitted) {
                 try {
+                    response.reset()
                     response.sendError(HttpStatus.INTERNAL_SERVER_ERROR.value(), "Streaming error")
-                } catch (ex: IllegalStateException) {
-                    logger.debug { "Response already committed, cannot send error" }
-                } catch (ex: IOException) {
-                    logger.debug { "Failed to send error response" }
+                } catch (ex: Exception) {
+                    logger.debug { "Could not send error response: ${ex.message}" }
+                }
+            }
+        } catch (e: IndexOutOfBoundsException) {
+            logger.error(e) { "Index out of bounds for file: $path, fileSize: $fileSize" }
+            if (!response.isCommitted) {
+                try {
+                    response.reset()
+                    response.sendError(HttpStatus.REQUESTED_RANGE_NOT_SATISFIABLE.value(), "Invalid range request")
+                } catch (ex: Exception) {
+                    logger.debug { "Could not send error response: ${ex.message}" }
                 }
             }
         } catch (e: Exception) {
             logger.error(e) { "Unexpected error during streaming: $path" }
             if (!response.isCommitted) {
                 try {
+                    response.reset()
                     response.sendError(HttpStatus.INTERNAL_SERVER_ERROR.value(), "Streaming error")
-                } catch (ex: IllegalStateException) {
-                    logger.debug { "Response already committed, cannot send error" }
-                } catch (ex: IOException) {
-                    logger.debug { "Failed to send error response" }
+                } catch (ex: Exception) {
+                    logger.debug { "Could not send error response: ${ex.message}" }
                 }
             }
+        }
+    }
+
+    private fun streamFullFile(file: java.io.File, fileSize: Long, response: HttpServletResponse, path: String) {
+        response.setHeader(HttpHeaders.CONTENT_LENGTH, fileSize.toString())
+        response.status = HttpStatus.OK.value()
+
+        try {
+            file.inputStream().use { input ->
+                val buffer = ByteArray(8192)
+                var bytesRead: Int
+                var totalWritten = 0L
+                while (input.read(buffer).also { bytesRead = it } != -1) {
+                    try {
+                        response.outputStream.write(buffer, 0, bytesRead)
+                        totalWritten += bytesRead
+                        if (totalWritten % (8192 * 10) == 0L) {
+                            response.outputStream.flush()
+                        }
+                    } catch (e: IOException) {
+                        if (isClientDisconnect(e)) {
+                            logger.debug { "Client disconnected during full streaming at ${totalWritten}/${fileSize} bytes" }
+                            return
+                        }
+                        throw e
+                    }
+                }
+                response.outputStream.flush()
+            }
+            logger.debug { "Full stream completed: $path, total: $fileSize bytes" }
+        } catch (e: IOException) {
+            if (isClientDisconnect(e)) {
+                logger.debug { "Client disconnected during full streaming: $path" }
+                return
+            }
+            throw e
+        }
+    }
+
+    private fun streamPartialFile(
+        file: java.io.File,
+        fileSize: Long,
+        rangeHeader: String,
+        response: HttpServletResponse,
+        path: String
+    ) {
+        val (start, end) = parseRange(rangeHeader, fileSize)
+
+        // Validate range bounds
+        if (start < 0 || end >= fileSize || start > end) {
+            logger.warn { "Invalid range request: start=$start, end=$end, fileSize=$fileSize, header=$rangeHeader" }
+            response.setHeader(HttpHeaders.CONTENT_RANGE, "bytes */$fileSize")
+            response.status = HttpStatus.REQUESTED_RANGE_NOT_SATISFIABLE.value()
+            return
+        }
+
+        val contentLength = end - start + 1
+        response.setHeader(HttpHeaders.CONTENT_LENGTH, contentLength.toString())
+        response.setHeader(HttpHeaders.CONTENT_RANGE, "bytes $start-$end/$fileSize")
+        response.status = HttpStatus.PARTIAL_CONTENT.value()
+
+        try {
+            RandomAccessFile(file, "r").use { raf ->
+                raf.seek(start)
+                // Use a larger buffer for better performance
+                val bufferSize = 64 * 1024 // 64KB buffer
+                val buffer = ByteArray(bufferSize)
+                var bytesRemaining = contentLength
+                var totalWritten = 0L
+
+                while (bytesRemaining > 0) {
+                    // Calculate read size safely using min of Long values
+                    val readSize = minOf(bufferSize.toLong(), bytesRemaining).toInt()
+
+                    // Ensure readSize is positive
+                    if (readSize <= 0) {
+                        logger.warn { "Invalid read size: $readSize, bytesRemaining: $bytesRemaining" }
+                        break
+                    }
+
+                    val bytesRead = try {
+                        raf.read(buffer, 0, readSize)
+                    } catch (e: IndexOutOfBoundsException) {
+                        logger.error(e) { "IndexOutOfBounds: readSize=$readSize, bytesRemaining=$bytesRemaining, filePointer=${raf.filePointer}, fileLength=${file.length()}" }
+                        throw e
+                    }
+
+                    if (bytesRead == -1) {
+                        logger.warn { "Unexpected EOF: expected $readSize bytes, got -1, filePointer=${raf.filePointer}, fileLength=${file.length()}" }
+                        break
+                    }
+
+                    try {
+                        response.outputStream.write(buffer, 0, bytesRead)
+                        totalWritten += bytesRead
+                        bytesRemaining -= bytesRead
+
+                        // Flush periodically
+                        if (totalWritten % (bufferSize * 10) == 0L) {
+                            response.outputStream.flush()
+                        }
+                    } catch (e: IOException) {
+                        if (isClientDisconnect(e)) {
+                            logger.debug { "Client disconnected during partial streaming at ${totalWritten}/${contentLength} bytes" }
+                            return
+                        }
+                        throw e
+                    }
+                }
+                response.outputStream.flush()
+                logger.debug { "Partial stream completed: $path, range: $rangeHeader, sent: $totalWritten bytes" }
+            }
+        } catch (e: IOException) {
+            if (isClientDisconnect(e)) {
+                logger.debug { "Client disconnected during partial streaming: $path" }
+                return
+            }
+            throw e
         }
     }
 
@@ -214,27 +235,36 @@ class StreamingServiceImpl(
                 message.contains("Connection reset") ||
                 message.contains("An established connection was aborted") ||
                 message.contains("Software caused connection abort") ||
+                message.contains("Connection timed out") ||
                 e is org.apache.catalina.connector.ClientAbortException
     }
 
-    private fun parseRange(rangeHeader: String?, fileSize: Long): Pair<Long, Long> {
-        if (rangeHeader == null) {
-            return 0L to (fileSize - 1)
-        }
-
+    private fun parseRange(rangeHeader: String, fileSize: Long): Pair<Long, Long> {
         try {
-            val bytesRange = rangeHeader.replace("bytes=", "")
+            // Handle empty file case
+            if (fileSize <= 0) {
+                return 0L to 0L
+            }
+
+            val bytesRange = rangeHeader.replace("bytes=", "").trim()
             val parts = bytesRange.split("-")
-            val start = parts[0].toLongOrNull() ?: 0L
-            val end = if (parts.size > 1 && parts[1].isNotEmpty()) {
-                parts[1].toLongOrNull() ?: (fileSize - 1)
+
+            val start = if (parts[0].isNotEmpty()) {
+                parts[0].toLong().coerceIn(0, fileSize - 1)
             } else {
+                0L
+            }
+
+            val end = if (parts.size > 1 && parts[1].isNotEmpty()) {
+                parts[1].toLong().coerceIn(start, fileSize - 1)
+            } else {
+                // Open-ended range: from start to end of file
                 fileSize - 1
             }
 
-            return start to end.coerceAtMost(fileSize - 1)
+            return start to end
         } catch (e: Exception) {
-            logger.warn(e) { "Invalid range header: $rangeHeader" }
+            logger.warn(e) { "Invalid range header: $rangeHeader, using full range" }
             return 0L to (fileSize - 1)
         }
     }

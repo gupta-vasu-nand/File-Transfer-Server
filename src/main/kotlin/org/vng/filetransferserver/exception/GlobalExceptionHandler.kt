@@ -76,7 +76,16 @@ class GlobalExceptionHandler {
         return buildErrorResponse(ex, HttpStatus.INTERNAL_SERVER_ERROR, request)
     }
 
-    // Handle AsyncRequestNotUsableException (client disconnect during async streaming)
+    @ExceptionHandler(IndexOutOfBoundsException::class)
+    fun handleIndexOutOfBounds(
+        ex: IndexOutOfBoundsException,
+        request: HttpServletRequest
+    ): ResponseEntity<ErrorResponseDTO>? {
+        logger.warn { "Index out of bounds during streaming: ${ex.message}" }
+        // Return null to let the streaming service handle it
+        return null
+    }
+
     @ExceptionHandler(AsyncRequestNotUsableException::class)
     fun handleAsyncRequestNotUsable(
         ex: AsyncRequestNotUsableException,
@@ -91,7 +100,6 @@ class GlobalExceptionHandler {
         return null
     }
 
-    // Handle client abort exception
     @ExceptionHandler(org.apache.catalina.connector.ClientAbortException::class)
     fun handleClientAbort(
         ex: org.apache.catalina.connector.ClientAbortException,
@@ -101,7 +109,6 @@ class GlobalExceptionHandler {
         return null
     }
 
-    // Handle IO exceptions that indicate client disconnect
     @ExceptionHandler(IOException::class)
     fun handleIOException(ex: IOException, request: HttpServletRequest): ResponseEntity<ErrorResponseDTO>? {
         if (isClientDisconnect(ex)) {
