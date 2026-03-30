@@ -8,5 +8,6 @@ data class FolderInfoDTO(
     val fileCount: Int,
     val totalSize: Long,
     val totalSizeFormatted: String,
-    val lastModified: Instant
+    val lastModified: Instant,
+    val children: List<FolderInfoDTO>? = null
 )

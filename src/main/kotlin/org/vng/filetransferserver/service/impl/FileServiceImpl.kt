@@ -1,310 +1,285 @@
 package org.vng.filetransferserver.service.impl
 
+import mu.KotlinLogging
+import org.apache.tika.Tika
+import org.springframework.stereotype.Service
+import org.springframework.web.multipart.MultipartFile
+import org.vng.filetransferserver.config.StorageProperties
 import org.vng.filetransferserver.dto.*
 import org.vng.filetransferserver.exception.*
 import org.vng.filetransferserver.service.FileService
 import org.vng.filetransferserver.util.FileUtils
-import mu.KotlinLogging
-import org.springframework.beans.factory.annotation.Qualifier
-import org.springframework.beans.factory.annotation.Value
-import org.springframework.core.io.FileSystemResource
-import org.springframework.core.io.Resource
-import org.springframework.stereotype.Service
-import org.springframework.web.multipart.MultipartFile
-import java.io.File
+import java.io.IOException
 import java.nio.file.*
+import java.nio.file.attribute.BasicFileAttributes
 import java.time.Instant
 import java.time.LocalDateTime
-import kotlin.io.path.*
-import kotlin.system.measureTimeMillis
 
 private val logger = KotlinLogging.logger {}
 
 @Service
 class FileServiceImpl(
-    @Qualifier("storageDirectory") private val storagePath: Path
+    private val storageProperties: StorageProperties
 ) : FileService {
 
-    @Value("\${file.max-size:1073741824}")
-    private lateinit var maxFileSize: String
+    private val storagePath: Path = storageProperties.getStoragePath()
+    private val tika = Tika()
 
-    override fun uploadFile(file: MultipartFile, subPath: String?): FileUploadResponseDTO {
-        val originalFilename = file.originalFilename ?: file.name
-        val sanitizedFilename = FileUtils.sanitizeFilename(originalFilename)
-        val uniqueFilename = FileUtils.generateUniqueFilename(sanitizedFilename)
+    init {
+        initializeStorage()
+    }
 
-        // Determine target directory based on file type
-        val typeFolder = getFileTypeFolder(originalFilename)
-
-        // Build the target path
-        val targetDir = if (!subPath.isNullOrBlank()) {
-            // If subPath is provided (user selected a folder), use that
-            storagePath.resolve(subPath).normalize()
-        } else {
-            // Otherwise use the type-based folder
-            storagePath.resolve(typeFolder)
-        }
-
-        if (!targetDir.startsWith(storagePath)) {
-            throw InvalidFileTypeException("Invalid path traversal attempt")
-        }
-
-        if (!Files.exists(targetDir)) {
-            Files.createDirectories(targetDir)
-            logger.info { "Created directory: ${targetDir.toAbsolutePath()}" }
-        }
-
-        val targetPath = targetDir.resolve(uniqueFilename)
-
-        if (Files.exists(targetPath)) {
-            throw FileStorageException("File already exists: $uniqueFilename")
-        }
-
+    private fun initializeStorage() {
         try {
-            file.inputStream.use { input ->
-                Files.copy(input, targetPath, StandardCopyOption.REPLACE_EXISTING)
+            if (!Files.exists(storagePath)) {
+                Files.createDirectories(storagePath)
+                logger.info { "Created storage directory: $storagePath" }
             }
-
-            logger.info { "Uploaded file: ${targetPath.toAbsolutePath()} (${file.size} bytes)" }
-
-            // Get the relative path from storage root
-            val relativePath = storagePath.relativize(targetPath).toString()
-
-            return FileUploadResponseDTO(
-                filename = uniqueFilename,
-                originalFilename = originalFilename,
-                size = file.size,
-                contentType = file.contentType ?: "application/octet-stream",
-                uploadTime = LocalDateTime.now(),
-                downloadUrl = "/api/files/$relativePath",
-                message = "File uploaded successfully to ${targetDir.fileName}"
-            )
-        } catch (e: Exception) {
-            logger.error(e) { "Failed to upload file" }
-            throw FileStorageException("Failed to upload file: ${e.message}", e)
+            logger.info { "Storage initialized at: $storagePath" }
+        } catch (e: IOException) {
+            logger.error(e) { "Failed to initialize storage" }
+            throw FileStorageException("Failed to initialize storage", e)
         }
     }
 
-    private fun getFileTypeFolder(filename: String): String {
-        val extension = FileUtils.getFileExtension(filename)
-        return when (extension) {
-            in listOf(".mp4", ".webm", ".mkv", ".avi", ".mov", ".mpeg", ".flv", ".m4v") -> "Videos"
-            in listOf(".mp3", ".wav", ".flac", ".aac", ".ogg", ".m4a") -> "Audio"
-            in listOf(".jpg", ".jpeg", ".png", ".gif", ".webp", ".svg", ".bmp") -> "Images"
-            in listOf(".pdf", ".doc", ".docx", ".xls", ".xlsx", ".ppt", ".pptx") -> "Documents"
-            in listOf(
-                ".js",
-                ".html",
-                ".css",
-                ".json",
-                ".xml",
-                ".py",
-                ".java",
-                ".kt",
-                ".cpp",
-                ".c",
-                ".php",
-                ".rb",
-                ".go",
-                ".ts",
-                ".kt",
-                ".kts"
-            ) -> "Code"
-
-            else -> "Others"
-        }
-    }
-
-    override fun downloadFile(filename: String): Resource {
-        val file = findFile(filename)
-        logger.debug { "Downloading file: ${file.absolutePath}" }
-        return FileSystemResource(file)
-    }
-
-    override fun getFileMetadata(filename: String): MediaInfoDTO {
-        val file = findFile(filename)
-        val relativePath = storagePath.relativize(file.toPath()).toString()
-        return buildMediaInfoDTO(file, relativePath)
-    }
-
-    override fun deleteFile(filename: String): Boolean {
-        val file = findFile(filename)
-        return try {
-            Files.deleteIfExists(file.toPath())
-            logger.info { "Deleted file: ${file.absolutePath}" }
-            true
-        } catch (e: Exception) {
-            logger.error(e) { "Failed to delete file" }
-            throw FileStorageException("Failed to delete file: ${e.message}", e)
-        }
-    }
-
-    override fun moveFile(source: String, destination: String): Boolean {
-        val sourceFile = findFile(source)
-        val destPath = storagePath.resolve(destination).normalize()
-
-        if (!destPath.startsWith(storagePath)) {
-            throw InvalidFileTypeException("Invalid destination path")
-        }
-
-        val destParent = destPath.parent
-        if (destParent != null && !Files.exists(destParent)) {
-            Files.createDirectories(destParent)
-        }
-
-        return try {
-            Files.move(sourceFile.toPath(), destPath, StandardCopyOption.REPLACE_EXISTING)
-            logger.info { "Moved file from $source to $destination" }
-            true
-        } catch (e: Exception) {
-            logger.error(e) { "Failed to move file" }
-            throw FileStorageException("Failed to move file: ${e.message}", e)
-        }
-    }
-
-    override fun copyFile(source: String, destination: String): Boolean {
-        val sourceFile = findFile(source)
-        val destPath = storagePath.resolve(destination).normalize()
-
-        if (!destPath.startsWith(storagePath)) {
-            throw InvalidFileTypeException("Invalid destination path")
-        }
-
-        val destParent = destPath.parent
-        if (destParent != null && !Files.exists(destParent)) {
-            Files.createDirectories(destParent)
-        }
-
-        return try {
-            Files.copy(sourceFile.toPath(), destPath, StandardCopyOption.REPLACE_EXISTING)
-            logger.info { "Copied file from $source to $destination" }
-            true
-        } catch (e: Exception) {
-            logger.error(e) { "Failed to copy file" }
-            throw FileStorageException("Failed to copy file: ${e.message}", e)
-        }
-    }
-
-    override fun renameFile(oldName: String, newName: String): Boolean {
-        val oldFile = findFile(oldName)
-        val newPath = oldFile.parentFile.toPath().resolve(FileUtils.sanitizeFilename(newName))
-
-        return try {
-            Files.move(oldFile.toPath(), newPath, StandardCopyOption.REPLACE_EXISTING)
-            logger.info { "Renamed file from $oldName to ${newPath.fileName}" }
-            true
-        } catch (e: Exception) {
-            logger.error(e) { "Failed to rename file" }
-            throw FileStorageException("Failed to rename file: ${e.message}", e)
-        }
-    }
-
-    override fun batchDelete(filenames: List<String>): BatchOperationResponseDTO {
-        val results = filenames.map { filename ->
-            try {
-                deleteFile(filename)
-                BatchOperationResult(filename, true)
-            } catch (e: Exception) {
-                BatchOperationResult(filename, false, e.message)
-            }
-        }
-
-        return BatchOperationResponseDTO(
-            successCount = results.count { it.success },
-            failureCount = results.count { !it.success },
-            results = results,
-            message = "Batch delete completed"
-        )
-    }
-
-    override fun batchMove(sources: List<String>, destination: String): BatchOperationResponseDTO {
-        val results = sources.map { source ->
-            try {
-                val destPath = Paths.get(destination, Paths.get(source).fileName.toString()).toString()
-                moveFile(source, destPath)
-                BatchOperationResult(source, true)
-            } catch (e: Exception) {
-                BatchOperationResult(source, false, e.message)
-            }
-        }
-
-        return BatchOperationResponseDTO(
-            successCount = results.count { it.success },
-            failureCount = results.count { !it.success },
-            results = results,
-            message = "Batch move completed"
-        )
-    }
-
-    override fun batchCopy(sources: List<String>, destination: String): BatchOperationResponseDTO {
-        val results = sources.map { source ->
-            try {
-                val destPath = Paths.get(destination, Paths.get(source).fileName.toString()).toString()
-                copyFile(source, destPath)
-                BatchOperationResult(source, true)
-            } catch (e: Exception) {
-                BatchOperationResult(source, false, e.message)
-            }
-        }
-
-        return BatchOperationResponseDTO(
-            successCount = results.count { it.success },
-            failureCount = results.count { !it.success },
-            results = results,
-            message = "Batch copy completed"
-        )
-    }
-
-    override fun getFolderContents(path: String?): FolderContentsDTO {
+    private fun resolvePath(path: String?): Path {
         val targetPath = if (path.isNullOrBlank()) {
             storagePath
         } else {
-            val resolved = storagePath.resolve(path).normalize()
-            if (!resolved.startsWith(storagePath)) {
-                throw InvalidFileTypeException("Invalid path")
-            }
-            resolved
+            val normalized = FileUtils.normalizePath(path)
+            storagePath.resolve(normalized)
         }
 
-        logger.debug { "Getting contents for: ${targetPath.toAbsolutePath()}" }
+        // Path traversal prevention
+        if (!targetPath.normalize().startsWith(storagePath.normalize())) {
+            logger.warn { "Path traversal attempt: $path" }
+            throw PathTraversalException("Access denied: Invalid path")
+        }
 
-        if (!Files.exists(targetPath) || !Files.isDirectory(targetPath)) {
-            throw FileNotFoundException("Directory not found: ${targetPath.toAbsolutePath()}")
+        return targetPath
+    }
+
+    override fun uploadFile(file: MultipartFile, folderPath: String?): FileUploadResponseDTO {
+        logger.info { "Uploading file: ${file.originalFilename} to folder: $folderPath" }
+
+        val targetDir = resolvePath(folderPath)
+        if (!Files.exists(targetDir)) {
+            Files.createDirectories(targetDir)
+        }
+
+        val sanitizedFilename = FileUtils.sanitizeFilename(file.originalFilename ?: file.name)
+        val targetFile = targetDir.resolve(sanitizedFilename)
+
+        if (Files.exists(targetFile)) {
+            throw FileStorageException("File already exists: $sanitizedFilename")
+        }
+
+        try {
+            file.transferTo(targetFile.toFile())
+            logger.info { "File uploaded successfully: ${targetFile.toAbsolutePath()}" }
+
+            val relativePath = storagePath.relativize(targetFile).toString()
+            return FileUploadResponseDTO(
+                filename = relativePath,
+                originalFilename = sanitizedFilename,
+                size = file.size,
+                contentType = file.contentType ?: tika.detect(file.inputStream),
+                uploadTime = LocalDateTime.now(),
+                downloadUrl = "/api/files/${relativePath.replace("\\", "/")}",
+                message = "File uploaded successfully"
+            )
+        } catch (e: IOException) {
+            logger.error(e) { "Failed to upload file: ${file.originalFilename}" }
+            throw FileStorageException("Failed to upload file", e)
+        }
+    }
+
+    override fun downloadFile(path: String): Path {
+        logger.info { "Downloading file: $path" }
+        val targetFile = resolvePath(path)
+
+        if (!Files.exists(targetFile) || Files.isDirectory(targetFile)) {
+            throw FileNotFoundException("File not found: $path")
+        }
+
+        return targetFile
+    }
+
+    override fun deleteFile(path: String): Boolean {
+        logger.info { "Deleting file: $path" }
+        val targetFile = resolvePath(path)
+
+        if (!Files.exists(targetFile)) {
+            throw FileNotFoundException("File not found: $path")
+        }
+
+        if (Files.isDirectory(targetFile)) {
+            throw InvalidFileTypeException("Cannot delete directory using file delete: $path")
+        }
+
+        try {
+            Files.delete(targetFile)
+            logger.info { "File deleted successfully: $path" }
+            return true
+        } catch (e: IOException) {
+            logger.error(e) { "Failed to delete file: $path" }
+            throw FileStorageException("Failed to delete file", e)
+        }
+    }
+
+    override fun getFileMetadata(path: String): FileMetadataDTO {
+        logger.debug { "Getting metadata for: $path" }
+        val targetFile = resolvePath(path)
+
+        if (!Files.exists(targetFile)) {
+            throw FileNotFoundException("File not found: $path")
+        }
+
+        val attributes = Files.readAttributes(targetFile, BasicFileAttributes::class.java)
+        val relativePath = storagePath.relativize(targetFile).toString()
+
+        return FileMetadataDTO(
+            filename = targetFile.fileName.toString(),
+            path = relativePath,
+            size = attributes.size(),
+            sizeFormatted = FileUtils.formatFileSize(attributes.size()),
+            contentType = if (Files.isRegularFile(targetFile)) tika.detect(targetFile) else "application/x-directory",
+            lastModified = attributes.lastModifiedTime().toInstant(),
+            isDirectory = Files.isDirectory(targetFile),
+            parentPath = targetFile.parent?.let { storagePath.relativize(it).toString() }
+        )
+    }
+
+    override fun listAllFiles(): List<MediaInfoDTO> {
+        logger.debug { "Listing all files" }
+        val files = mutableListOf<MediaInfoDTO>()
+
+        try {
+            Files.walk(storagePath)
+                .use { stream ->
+                    stream.filter { Files.isRegularFile(it) }
+                        .forEach { file ->
+                            files.add(buildMediaInfoDTO(file))
+                        }
+                }
+        } catch (e: IOException) {
+            logger.error(e) { "Failed to list files" }
+            throw FileStorageException("Failed to list files", e)
+        }
+
+        logger.info { "Found ${files.size} files" }
+        return files
+    }
+
+    override fun moveFile(sourcePath: String, destinationPath: String): Boolean {
+        logger.info { "Moving file from $sourcePath to $destinationPath" }
+        val source = resolvePath(sourcePath)
+        val destination = resolvePath(destinationPath)
+
+        if (!Files.exists(source)) {
+            throw FileNotFoundException("Source file not found: $sourcePath")
+        }
+
+        if (Files.isDirectory(source)) {
+            throw InvalidFileTypeException("Cannot move directory using file move: $sourcePath")
+        }
+
+        try {
+            Files.move(source, destination, StandardCopyOption.REPLACE_EXISTING)
+            logger.info { "File moved successfully" }
+            return true
+        } catch (e: IOException) {
+            logger.error(e) { "Failed to move file" }
+            throw FileStorageException("Failed to move file", e)
+        }
+    }
+
+    override fun copyFile(sourcePath: String, destinationPath: String): Boolean {
+        logger.info { "Copying file from $sourcePath to $destinationPath" }
+        val source = resolvePath(sourcePath)
+        val destination = resolvePath(destinationPath)
+
+        if (!Files.exists(source)) {
+            throw FileNotFoundException("Source file not found: $sourcePath")
+        }
+
+        if (Files.isDirectory(source)) {
+            throw InvalidFileTypeException("Cannot copy directory using file copy: $sourcePath")
+        }
+
+        try {
+            Files.copy(source, destination, StandardCopyOption.REPLACE_EXISTING)
+            logger.info { "File copied successfully" }
+            return true
+        } catch (e: IOException) {
+            logger.error(e) { "Failed to copy file" }
+            throw FileStorageException("Failed to copy file", e)
+        }
+    }
+
+    override fun renameFile(path: String, newName: String): Boolean {
+        logger.info { "Renaming file: $path to $newName" }
+        val source = resolvePath(path)
+
+        if (!Files.exists(source)) {
+            throw FileNotFoundException("File not found: $path")
+        }
+
+        val sanitizedNewName = FileUtils.sanitizeFilename(newName)
+        val destination = source.parent.resolve(sanitizedNewName)
+
+        try {
+            Files.move(source, destination, StandardCopyOption.REPLACE_EXISTING)
+            logger.info { "File renamed successfully" }
+            return true
+        } catch (e: IOException) {
+            logger.error(e) { "Failed to rename file" }
+            throw FileStorageException("Failed to rename file", e)
+        }
+    }
+
+    override fun getFolderContents(folderPath: String?): FolderContentsDTO {
+        logger.info { "Getting folder contents for: $folderPath" }
+        val targetDir = resolvePath(folderPath)
+
+        if (!Files.exists(targetDir)) {
+            throw DirectoryNotFoundException("Directory not found: $folderPath")
+        }
+
+        if (!Files.isDirectory(targetDir)) {
+            throw InvalidFileTypeException("Path is not a directory: $folderPath")
         }
 
         val folders = mutableListOf<FolderInfoDTO>()
         val files = mutableListOf<MediaInfoDTO>()
         var totalSize = 0L
 
-        Files.newDirectoryStream(targetPath).use { stream ->
-            stream.forEach { entry ->
-                if (Files.isDirectory(entry)) {
-                    val folderInfo = getFolderInfo(entry)
-                    folders.add(folderInfo)
-                    totalSize += folderInfo.totalSize
-                } else {
+        try {
+            Files.list(targetDir).use { stream ->
+                stream.forEach { entry ->
                     val relativePath = storagePath.relativize(entry).toString()
-                    val mediaInfo = buildMediaInfoDTO(entry.toFile(), relativePath)
-                    files.add(mediaInfo)
-                    totalSize += mediaInfo.size
+                    if (Files.isDirectory(entry)) {
+                        val folderInfo = buildFolderInfoDTO(entry, relativePath)
+                        folders.add(folderInfo)
+                    } else {
+                        files.add(buildMediaInfoDTO(entry))
+                        totalSize += Files.size(entry)
+                    }
                 }
             }
+        } catch (e: IOException) {
+            logger.error(e) { "Failed to list directory contents" }
+            throw FileStorageException("Failed to list directory contents", e)
         }
 
-        folders.sortBy { it.name.lowercase() }
-        files.sortBy { it.filename.lowercase() }
-
-        val parentPath = if (targetPath == storagePath) {
-            null
-        } else {
-            storagePath.relativize(targetPath.parent).toString().ifEmpty { null }
-        }
+        val parentPath = targetDir.parent?.let { storagePath.relativize(it).toString() }
+            ?.takeIf { it.isNotEmpty() }
 
         return FolderContentsDTO(
-            currentPath = if (targetPath == storagePath) "" else storagePath.relativize(targetPath).toString(),
+            currentPath = folderPath ?: "",
             parentPath = parentPath,
-            folders = folders,
-            files = files,
+            folders = folders.sortedBy { it.name.lowercase() },
+            files = files.sortedBy { it.filename.lowercase() },
             totalSize = totalSize,
             totalSizeFormatted = FileUtils.formatFileSize(totalSize),
             fileCount = files.size,
@@ -312,237 +287,284 @@ class FileServiceImpl(
         )
     }
 
-    override fun createFolder(path: String): Boolean {
-        val targetPath = storagePath.resolve(path).normalize()
+    override fun createFolder(folderPath: String): Boolean {
+        logger.info { "Creating folder: $folderPath" }
+        val targetDir = resolvePath(folderPath)
 
-        if (!targetPath.startsWith(storagePath)) {
-            throw InvalidFileTypeException("Invalid folder path")
+        if (Files.exists(targetDir)) {
+            throw FileStorageException("Folder already exists: $folderPath")
         }
 
-        return try {
-            Files.createDirectories(targetPath)
-            logger.info { "Created folder: ${targetPath.toAbsolutePath()}" }
-            true
-        } catch (e: Exception) {
+        try {
+            Files.createDirectories(targetDir)
+            logger.info { "Folder created successfully: $folderPath" }
+            return true
+        } catch (e: IOException) {
             logger.error(e) { "Failed to create folder" }
-            throw DirectoryOperationException("Failed to create folder: ${e.message}")
+            throw FileStorageException("Failed to create folder", e)
         }
     }
 
-    override fun deleteFolder(path: String): Boolean {
-        val targetPath = storagePath.resolve(path).normalize()
+    override fun deleteFolder(folderPath: String): Boolean {
+        logger.info { "Deleting folder: $folderPath" }
+        val targetDir = resolvePath(folderPath)
 
-        if (!targetPath.startsWith(storagePath) || targetPath == storagePath) {
-            throw InvalidFileTypeException("Cannot delete root directory")
+        if (!Files.exists(targetDir)) {
+            throw DirectoryNotFoundException("Directory not found: $folderPath")
         }
 
-        return try {
-            targetPath.toFile().deleteRecursively()
-            logger.info { "Deleted folder: ${targetPath.toAbsolutePath()}" }
-            true
-        } catch (e: Exception) {
+        if (!Files.isDirectory(targetDir)) {
+            throw InvalidFileTypeException("Path is not a directory: $folderPath")
+        }
+
+        try {
+            Files.walk(targetDir)
+                .sorted(Comparator.reverseOrder())
+                .forEach { Files.deleteIfExists(it) }
+            logger.info { "Folder deleted successfully: $folderPath" }
+            return true
+        } catch (e: IOException) {
             logger.error(e) { "Failed to delete folder" }
-            throw DirectoryOperationException("Failed to delete folder: ${e.message}")
+            throw FileStorageException("Failed to delete folder", e)
         }
     }
 
-    override fun moveFolder(source: String, destination: String): Boolean {
-        val sourcePath = storagePath.resolve(source).normalize()
-        val destPath = storagePath.resolve(destination).normalize()
+    override fun moveFolder(sourcePath: String, destinationPath: String): Boolean {
+        logger.info { "Moving folder from $sourcePath to $destinationPath" }
+        val source = resolvePath(sourcePath)
+        val destination = resolvePath(destinationPath)
 
-        if (!sourcePath.startsWith(storagePath) || !destPath.startsWith(storagePath)) {
-            throw InvalidFileTypeException("Invalid path")
+        if (!Files.exists(source)) {
+            throw DirectoryNotFoundException("Source directory not found: $sourcePath")
         }
 
-        if (sourcePath == storagePath) {
-            throw DirectoryOperationException("Cannot move root directory")
+        if (!Files.isDirectory(source)) {
+            throw InvalidFileTypeException("Source is not a directory: $sourcePath")
         }
 
-        return try {
-            Files.move(sourcePath, destPath, StandardCopyOption.REPLACE_EXISTING)
-            logger.info { "Moved folder from $source to $destination" }
-            true
-        } catch (e: Exception) {
+        try {
+            Files.move(source, destination, StandardCopyOption.REPLACE_EXISTING)
+            logger.info { "Folder moved successfully" }
+            return true
+        } catch (e: IOException) {
             logger.error(e) { "Failed to move folder" }
-            throw DirectoryOperationException("Failed to move folder: ${e.message}")
+            throw FileStorageException("Failed to move folder", e)
         }
     }
 
-    override fun searchFiles(query: String, folder: String?): SearchResultDTO {
-        val searchPath = if (folder.isNullOrBlank()) {
-            storagePath
-        } else {
-            storagePath.resolve(folder).normalize()
+    override fun getFolderTree(): List<FolderInfoDTO> {
+        logger.debug { "Building folder tree" }
+        return buildFolderTree(storagePath, "")
+    }
+
+    private fun buildFolderTree(dir: Path, relativePath: String): List<FolderInfoDTO> {
+        val result = mutableListOf<FolderInfoDTO>()
+
+        try {
+            Files.list(dir).use { stream ->
+                val folders = stream.filter { Files.isDirectory(it) }.toList()
+
+                folders.sortedBy { it.fileName.toString().lowercase() }.forEach { folder ->
+                    val folderRelativePath = if (relativePath.isEmpty()) {
+                        folder.fileName.toString()
+                    } else {
+                        "$relativePath/${folder.fileName}"
+                    }
+
+                    val children = buildFolderTree(folder, folderRelativePath)
+                    val folderInfo = buildFolderInfoDTO(folder, folderRelativePath, children)
+
+                    result.add(folderInfo)
+                }
+            }
+        } catch (e: IOException) {
+            logger.error(e) { "Failed to build folder tree for: $dir" }
         }
 
-        val results = mutableListOf<MediaInfoDTO>()
-        val searchTime = measureTimeMillis {
-            searchInDirectory(searchPath, query.lowercase(), results)
+        return result
+    }
+
+    private fun buildFolderInfoDTO(
+        folder: Path,
+        relativePath: String,
+        children: List<FolderInfoDTO>? = null
+    ): FolderInfoDTO {
+        var fileCount = 0
+        var totalSize = 0L
+
+        try {
+            Files.walk(folder)
+                .use { stream ->
+                    stream.filter { Files.isRegularFile(it) }
+                        .forEach { file ->
+                            fileCount++
+                            totalSize += Files.size(file)
+                        }
+                }
+        } catch (e: IOException) {
+            logger.error(e) { "Failed to calculate folder stats for: $folder" }
         }
 
-        return SearchResultDTO(
-            query = query,
-            totalResults = results.size,
-            results = results,
-            searchTime = searchTime
+        val attributes = Files.readAttributes(folder, BasicFileAttributes::class.java)
+
+        return FolderInfoDTO(
+            name = folder.fileName.toString(),
+            path = relativePath,
+            fileCount = fileCount,
+            totalSize = totalSize,
+            totalSizeFormatted = FileUtils.formatFileSize(totalSize),
+            lastModified = attributes.lastModifiedTime().toInstant(),
+            children = children
         )
     }
 
-    override fun getAllMediaFiles(): List<MediaInfoDTO> {
-        val mediaFiles = mutableListOf<MediaInfoDTO>()
-        collectAllFiles(storagePath, mediaFiles)
-        return mediaFiles
+    override fun searchFiles(query: String, folderPath: String?): SearchResultDTO {
+        logger.info { "Searching for: $query in folder: $folderPath" }
+        val searchDir = resolvePath(folderPath)
+        val results = mutableListOf<MediaInfoDTO>()
+        val searchQuery = query.lowercase()
+
+        try {
+            Files.walk(searchDir)
+                .use { stream ->
+                    stream.filter { Files.isRegularFile(it) }
+                        .forEach { file ->
+                            val filename = file.fileName.toString().lowercase()
+                            if (filename.contains(searchQuery)) {
+                                results.add(buildMediaInfoDTO(file))
+                            }
+                        }
+                }
+        } catch (e: IOException) {
+            logger.error(e) { "Failed to search files" }
+            throw FileStorageException("Failed to search files", e)
+        }
+
+        logger.info { "Found ${results.size} results for query: $query" }
+        return SearchResultDTO(
+            query = query,
+            results = results,
+            count = results.size
+        )
+    }
+
+    override fun batchOperation(request: BatchOperationDTO): BatchOperationResponseDTO {
+        logger.info { "Performing batch operation: ${request.operation} on ${request.files.size} files" }
+
+        val success = mutableListOf<String>()
+        val failed = mutableListOf<Pair<String, String>>()
+
+        request.files.forEach { filePath ->
+            try {
+                when (request.operation.lowercase()) {
+                    "delete" -> {
+                        deleteFile(filePath)
+                        success.add(filePath)
+                    }
+
+                    "move" -> {
+                        if (request.destination != null) {
+                            moveFile(filePath, request.destination)
+                            success.add(filePath)
+                        } else {
+                            failed.add(filePath to "Destination not specified")
+                        }
+                    }
+
+                    "copy" -> {
+                        if (request.destination != null) {
+                            copyFile(filePath, request.destination)
+                            success.add(filePath)
+                        } else {
+                            failed.add(filePath to "Destination not specified")
+                        }
+                    }
+
+                    else -> failed.add(filePath to "Unknown operation: ${request.operation}")
+                }
+            } catch (e: Exception) {
+                logger.error(e) { "Batch operation failed for: $filePath" }
+                failed.add(filePath to (e.message ?: "Unknown error"))
+            }
+        }
+
+        return BatchOperationResponseDTO(
+            success = success,
+            failed = failed,
+            totalSuccess = success.size,
+            totalFailed = failed.size
+        )
     }
 
     override fun getSystemInfo(): FileSystemInfoDTO {
-        val totalSpace = storagePath.toFile().totalSpace
-        val freeSpace = storagePath.toFile().freeSpace
+        val storageFile = storagePath.toFile()
+        val totalSpace = storageFile.totalSpace
+        val freeSpace = storageFile.freeSpace
         val usedSpace = totalSpace - freeSpace
-        val usagePercentage = ((usedSpace.toDouble() / totalSpace) * 100).toInt()
+        val usagePercentage = if (totalSpace > 0) ((usedSpace.toDouble() / totalSpace) * 100).toInt() else 0
 
         return FileSystemInfoDTO(
             totalSpace = totalSpace,
-            freeSpace = freeSpace,
-            usedSpace = usedSpace,
             totalSpaceFormatted = FileUtils.formatFileSize(totalSpace),
+            freeSpace = freeSpace,
             freeSpaceFormatted = FileUtils.formatFileSize(freeSpace),
+            usedSpace = usedSpace,
             usedSpaceFormatted = FileUtils.formatFileSize(usedSpace),
             usagePercentage = usagePercentage
         )
     }
 
-    override fun getFileTree(): List<FolderInfoDTO> {
-        return buildFolderTree(storagePath)
+    override fun getFilePreview(path: String): Path {
+        logger.info { "Getting preview for: $path" }
+        val targetFile = resolvePath(path)
+
+        if (!Files.exists(targetFile) || Files.isDirectory(targetFile)) {
+            throw FileNotFoundException("File not found: $path")
+        }
+
+        return targetFile
     }
 
-    private fun findFile(filename: String): File {
-        val decodedFilename = java.net.URLDecoder.decode(filename, "UTF-8")
+    override fun getThumbnail(path: String): Path? {
+        logger.info { "Getting thumbnail for: $path" }
+        val targetFile = resolvePath(path)
 
-        // 1. Try to resolve the path as provided
-        var file = storagePath.resolve(decodedFilename).normalize().toFile()
-
-        // 2. If not found, check if it's inside a type-based subfolder
-        if (!file.exists()) {
-            val typeFolder = getFileTypeFolder(decodedFilename)
-            file = storagePath.resolve(typeFolder).resolve(decodedFilename).normalize().toFile()
+        if (!Files.exists(targetFile) || Files.isDirectory(targetFile)) {
+            throw FileNotFoundException("File not found: $path")
         }
 
-        logger.debug { "Looking for file: ${file.absolutePath}" }
-
-        if (!file.exists() || !file.isFile) {
-            logger.error { "File not found: ${file.absolutePath}" }
-            throw FileNotFoundException("File not found: $filename")
-        }
-
-        if (!file.absolutePath.startsWith(storagePath.toAbsolutePath().toString())) {
-            throw InvalidFileTypeException("Path traversal detected")
-        }
-
-        return file
+        // For now, return null (no thumbnail generation)
+        // Thumbnail generation can be added later with Thumbnailator
+        return null
     }
 
-    private fun buildMediaInfoDTO(file: File, relativePath: String): MediaInfoDTO {
-        val parentFolder = file.parentFile?.name ?: ""
-        val folderPath = if (file.parentFile == storagePath.toFile()) {
-            ""
-        } else {
-            storagePath.relativize(file.parentFile?.toPath() ?: storagePath).toString()
-        }
+    private fun buildMediaInfoDTO(file: Path): MediaInfoDTO {
+        val relativePath = storagePath.relativize(file).toString()
+        val filename = file.fileName.toString()
+        val size = Files.size(file)
+        val contentType = tika.detect(file)
+        val attributes = Files.readAttributes(file, BasicFileAttributes::class.java)
+
+        val parentFolder = file.parent?.let { storagePath.relativize(it).toString() } ?: ""
 
         return MediaInfoDTO(
-            filename = file.name,
-            title = file.nameWithoutExtension,
+            filename = filename,
+            title = filename,
             path = relativePath,
             parentFolder = parentFolder,
-            folderPath = folderPath,
-            size = file.length(),
-            sizeFormatted = FileUtils.formatFileSize(file.length()),
-            contentType = FileUtils.detectContentType(file.name),
-            lastModified = Instant.ofEpochMilli(file.lastModified()),
+            folderPath = parentFolder,
+            size = size,
+            sizeFormatted = FileUtils.formatFileSize(size),
+            contentType = contentType,
+            lastModified = attributes.lastModifiedTime().toInstant(),
             duration = null,
             bitrate = null,
-            resolution = FileUtils.detectResolution(file.name),
+            resolution = null,
             videoCodec = null,
             audioCodec = null,
-            hasAudio = true,
-            streamUrl = "/api/stream/$relativePath",
-            downloadUrl = "/api/files/$relativePath",
-            isDirectory = false
+            hasAudio = false,
+            streamUrl = "/api/stream?path=${relativePath.replace("\\", "/")}",
+            downloadUrl = "/api/files/${relativePath.replace("\\", "/")}"
         )
-    }
-
-    private fun getFolderInfo(folderPath: Path): FolderInfoDTO {
-        var fileCount = 0
-        var totalSize = 0L
-
-        folderPath.toFile().walkTopDown().forEach { file ->
-            if (file.isFile) {
-                fileCount++
-                totalSize += file.length()
-            }
-        }
-
-        return FolderInfoDTO(
-            name = folderPath.fileName.toString(),
-            path = storagePath.relativize(folderPath).toString(),
-            fileCount = fileCount,
-            totalSize = totalSize,
-            totalSizeFormatted = FileUtils.formatFileSize(totalSize),
-            lastModified = Instant.ofEpochMilli(folderPath.toFile().lastModified())
-        )
-    }
-
-    private fun searchInDirectory(directory: Path, query: String, results: MutableList<MediaInfoDTO>) {
-        try {
-            Files.newDirectoryStream(directory).use { stream ->
-                stream.forEach { entry ->
-                    if (Files.isDirectory(entry)) {
-                        searchInDirectory(entry, query, results)
-                    } else {
-                        if (entry.fileName.toString().lowercase().contains(query)) {
-                            results.add(buildMediaInfoDTO(entry.toFile(), storagePath.relativize(entry).toString()))
-                        }
-                    }
-                }
-            }
-        } catch (e: Exception) {
-            logger.error(e) { "Error searching directory: $directory" }
-        }
-    }
-
-    private fun collectAllFiles(directory: Path, files: MutableList<MediaInfoDTO>) {
-        try {
-            Files.newDirectoryStream(directory).use { stream ->
-                stream.forEach { entry ->
-                    if (Files.isDirectory(entry)) {
-                        collectAllFiles(entry, files)
-                    } else {
-                        files.add(buildMediaInfoDTO(entry.toFile(), storagePath.relativize(entry).toString()))
-                    }
-                }
-            }
-        } catch (e: Exception) {
-            logger.error(e) { "Error collecting files from: $directory" }
-        }
-    }
-
-    private fun buildFolderTree(directory: Path): List<FolderInfoDTO> {
-        val folders = mutableListOf<FolderInfoDTO>()
-
-        try {
-            Files.newDirectoryStream(directory) { entry ->
-                Files.isDirectory(entry)
-            }.use { stream ->
-                stream.forEach { entry ->
-                    folders.add(getFolderInfo(entry))
-                    // Recursively add subfolders
-                    folders.addAll(buildFolderTree(entry))
-                }
-            }
-        } catch (e: Exception) {
-            logger.error(e) { "Error building folder tree" }
-        }
-
-        return folders.distinctBy { it.path }.sortedBy { it.name.lowercase() }
     }
 }

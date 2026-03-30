@@ -1,8 +1,9 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
+
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <title>File Transfer Server - File Manager</title>
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
@@ -77,10 +78,14 @@
         }
 
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            font-family:
+                -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu,
+                sans-serif;
             background: var(--bg-main);
             color: var(--text-main);
-            transition: background-color 0.4s ease, color 0.4s ease;
+            transition:
+                background-color 0.4s ease,
+                color 0.4s ease;
             height: 100vh;
             overflow: hidden;
         }
@@ -109,7 +114,8 @@
             border-right: none;
         }
 
-        .sidebar-header, .sidebar-scrollable {
+        .sidebar-header,
+        .sidebar-scrollable {
             width: 320px;
             flex-shrink: 0;
         }
@@ -144,7 +150,9 @@
             border: 1px solid var(--border);
             box-shadow: var(--shadow);
             margin-top: 1rem;
-            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            transition:
+                transform 0.3s ease,
+                box-shadow 0.3s ease;
         }
 
         .connection-panel:hover {
@@ -395,7 +403,9 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            transition: background 0.2s, transform 0.2s;
+            transition:
+                background 0.2s,
+                transform 0.2s;
         }
 
         .menu-btn:hover {
@@ -415,7 +425,7 @@
         }
 
         @media (min-width: 901px) {
-            .sidebar:not(.collapsed) + .main-content .toolbar-brand {
+            .sidebar:not(.collapsed)+.main-content .toolbar-brand {
                 display: none;
             }
         }
@@ -458,7 +468,6 @@
             height: 18px;
         }
 
-        /* Search Suggestions Dropdown */
         .search-suggestions {
             position: absolute;
             top: 100%;
@@ -484,7 +493,9 @@
             cursor: pointer;
             border-bottom: 1px solid var(--border);
             color: var(--text-main);
-            transition: background 0.2s, padding-left 0.2s;
+            transition:
+                background 0.2s,
+                padding-left 0.2s;
             font-size: 0.9rem;
         }
 
@@ -608,12 +619,12 @@
             gap: 0.75rem;
         }
 
-        /* Upgraded Animations */
         @keyframes fadeInScale {
             0% {
                 opacity: 0;
                 transform: scale(0.9) translateY(15px);
             }
+
             100% {
                 opacity: 1;
                 transform: scale(1) translateY(0);
@@ -625,6 +636,19 @@
                 opacity: 0;
                 transform: translateY(-5px);
             }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+
             to {
                 opacity: 1;
                 transform: translateY(0);
@@ -666,6 +690,7 @@
             transform: translateY(-2px) scale(1.01);
         }
 
+        /* Set a high Z-index to ensure download/delete buttons are over everything */
         .file-card-actions {
             position: absolute;
             top: 10px;
@@ -675,6 +700,7 @@
             opacity: 0;
             transform: translateY(-5px);
             transition: all 0.3s;
+            z-index: 50;
         }
 
         .file-card:hover .file-card-actions {
@@ -703,6 +729,8 @@
             display: flex;
             align-items: center;
             justify-content: center;
+            position: relative;
+            z-index: 60;
         }
 
         .action-btn:hover {
@@ -730,11 +758,37 @@
             transition: all 0.4s var(--animation-timing);
         }
 
+        /* Color configurations for JS assigned classes */
+        .folder-icon {
+            color: var(--folder-color);
+        }
+
+        .video-icon {
+            color: var(--video-color);
+        }
+
+        .audio-icon {
+            color: var(--audio-color);
+        }
+
+        .image-icon {
+            color: var(--image-color);
+        }
+
+        .doc-icon {
+            color: var(--doc-color);
+        }
+
         .file-card:hover .file-icon-wrapper {
             background: var(--primary);
-            color: white;
             box-shadow: var(--shadow-glow);
             transform: scale(1.1) rotate(-3deg);
+        }
+
+        /* Force icon stroke to white when hovered */
+        .file-card:hover .file-icon-wrapper svg {
+            color: white !important;
+            stroke: white !important;
         }
 
         .file-grid.list-view .file-icon-wrapper {
@@ -861,6 +915,142 @@
             transition: opacity 0.3s ease;
         }
 
+        /* New styles for enhanced features */
+        .context-menu {
+            position: fixed;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            box-shadow: var(--shadow-lg);
+            z-index: 1000;
+            min-width: 180px;
+            overflow: hidden;
+            animation: fadeInScale 0.2s ease;
+        }
+
+        .context-menu-item {
+            padding: 0.75rem 1rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            cursor: pointer;
+            transition: all 0.2s;
+            color: var(--text-main);
+            font-size: 0.9rem;
+        }
+
+        .context-menu-item:hover {
+            background: var(--bg-secondary);
+            padding-left: 1.25rem;
+        }
+
+        .context-menu-item.danger:hover {
+            background: rgba(239, 68, 68, 0.1);
+            color: var(--danger);
+        }
+
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(4px);
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            animation: fadeIn 0.2s ease;
+        }
+
+        .modal-content {
+            background: var(--surface);
+            border-radius: var(--radius-lg);
+            padding: 1.5rem;
+            min-width: 300px;
+            max-width: 90%;
+            border: 1px solid var(--border);
+            box-shadow: var(--shadow-lg);
+        }
+
+        .modal-content h3 {
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .modal-content input {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            background: var(--input-bg);
+            color: var(--text-main);
+            margin-bottom: 1rem;
+        }
+
+        .modal-buttons {
+            display: flex;
+            gap: 0.5rem;
+            justify-content: flex-end;
+        }
+
+        .modal-buttons button {
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+        }
+
+        .toast {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: var(--surface);
+            border-left: 4px solid var(--primary);
+            padding: 1rem;
+            border-radius: var(--radius-md);
+            box-shadow: var(--shadow-lg);
+            z-index: 1000;
+            animation: slideUp 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            max-width: 300px;
+        }
+
+        .toast.success {
+            border-left-color: var(--success);
+        }
+
+        .toast.error {
+            border-left-color: var(--danger);
+        }
+
+        .toast.warning {
+            border-left-color: var(--warning);
+        }
+
+        .create-folder-btn {
+            margin-bottom: 0.5rem;
+            background: var(--gradient-primary);
+            color: white;
+        }
+
+        .folder-actions {
+            display: flex;
+            gap: 8px;
+            margin-top: 0.5rem;
+        }
+
+        .folder-actions button {
+            flex: 1;
+            padding: 0.5rem;
+            font-size: 0.8rem;
+        }
+
         @media (max-width: 900px) {
             .sidebar {
                 position: fixed;
@@ -890,492 +1080,995 @@
         }
     </style>
 </head>
+
 <body>
-<div class="app">
-    <div class="mobile-overlay" id="mobileOverlay" onclick="toggleSidebar()"></div>
+    <div class="app">
+        <div class="mobile-overlay" id="mobileOverlay" onclick="toggleSidebar()"></div>
 
-    <div class="sidebar" id="sidebar">
-        <div class="sidebar-header">
-            <h1 class="sidebar-title" style="margin-bottom: 1rem;"><i data-lucide="server"></i><span>File Manager</span>
-            </h1>
-            <div class="connection-panel">
-                <input type="text" id="serverIp" placeholder="Server IP" value="localhost">
-                <input type="number" id="serverPort" placeholder="Port" value="9090">
-                <button onclick="connectToServer()"><i data-lucide="plug"></i> <span>Connect Server</span></button>
-                <button onclick="autoDetectIp()"
-                        style="background: var(--bg-secondary); color: var(--text-main); box-shadow: none; border: 1px solid var(--border);">
-                    <i data-lucide="scan"></i> <span>Auto Detect</span>
-                </button>
+        <div class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <h1 class="sidebar-title" style="margin-bottom: 1rem">
+                    <i data-lucide="server"></i><span>File Manager</span>
+                </h1>
+                <div class="connection-panel">
+                    <input type="text" id="serverIp" placeholder="Server IP" value="localhost" />
+                    <input type="number" id="serverPort" placeholder="Port" value="9090" />
+                    <button onclick="connectToServer()">
+                        <i data-lucide="plug"></i> <span>Connect Server</span>
+                    </button>
+                    <button onclick="autoDetectIp()" style="
+                background: var(--bg-secondary);
+                color: var(--text-main);
+                box-shadow: none;
+                border: 1px solid var(--border);
+              ">
+                        <i data-lucide="scan"></i> <span>Auto Detect</span>
+                    </button>
+                </div>
+            </div>
+
+            <div class="sidebar-scrollable">
+                <div class="stats-section">
+                    <div class="stats-title">
+                        <i data-lucide="folder"></i><span>Current Folder</span>
+                    </div>
+                    <div class="stats-dashboard">
+                        <div class="stat-card">
+                            <div class="stat-label">Files</div>
+                            <div class="stat-value" id="folderFileCount">
+                                <i data-lucide="file"></i> -
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-label">Folders</div>
+                            <div class="stat-value" id="folderCount">
+                                <i data-lucide="folder"></i> -
+                            </div>
+                        </div>
+                        <div class="stat-card full-width">
+                            <div class="stat-label">Total Size</div>
+                            <div class="stat-value" id="folderTotalSize">
+                                <i data-lucide="hard-drive"></i> -
+                            </div>
+                        </div>
+                    </div>
+                    <div class="folder-actions">
+                        <button class="upload-btn create-folder-btn" onclick="showCreateFolderModal()"
+                            style="margin: 0">
+                            <i data-lucide="folder-plus"></i> New Folder
+                        </button>
+                    </div>
+                </div>
+
+                <div class="category-buttons">
+                    <h4><i data-lucide="folder-tree"></i> Quick Access</h4>
+                    <div class="category-grid">
+                        <button class="category-btn" onclick="navigateTo('Videos')">
+                            <i data-lucide="video"></i> Videos
+                        </button>
+                        <button class="category-btn" onclick="navigateTo('Audio')">
+                            <i data-lucide="music"></i> Audio
+                        </button>
+                        <button class="category-btn" onclick="navigateTo('Images')">
+                            <i data-lucide="image"></i> Images
+                        </button>
+                        <button class="category-btn" onclick="navigateTo('Documents')">
+                            <i data-lucide="file-text"></i> Docs
+                        </button>
+                        <button class="category-btn" onclick="navigateTo('Code')">
+                            <i data-lucide="code"></i> Code
+                        </button>
+                        <button class="category-btn" onclick="navigateTo('Others')">
+                            <i data-lucide="file"></i> Others
+                        </button>
+                    </div>
+                </div>
+
+                <div class="stats-section">
+                    <div class="stats-title">
+                        <i data-lucide="server"></i><span>System Storage</span>
+                    </div>
+                    <div class="stats-dashboard">
+                        <div class="stat-card full-width">
+                            <div class="stat-label">Used Space</div>
+                            <div class="stat-value" id="storageUsed">
+                                <i data-lucide="gauge"></i> -
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-label">Total Files</div>
+                            <div class="stat-value" id="globalFileCount">
+                                <i data-lucide="database"></i> -
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-label">Total Size</div>
+                            <div class="stat-value" id="globalTotalSize">
+                                <i data-lucide="hard-drive"></i> -
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="upload-area">
+                    <input type="file" id="uploadInput" multiple onchange="uploadFiles()" />
+                    <button class="upload-btn" onclick="document.getElementById('uploadInput').click()">
+                        <i data-lucide="upload-cloud"></i> <span>Upload Files</span>
+                    </button>
+                </div>
+
+                <div class="folder-tree" id="folderTree">
+                    <div class="tree-item active" onclick="navigateTo('')">
+                        <i data-lucide="folder-root"></i> <span>Root Directory</span>
+                    </div>
+                </div>
             </div>
         </div>
 
-        <div class="sidebar-scrollable">
-            <div class="stats-section">
-                <div class="stats-title"><i data-lucide="folder"></i><span>Current Folder</span></div>
-                <div class="stats-dashboard">
-                    <div class="stat-card">
-                        <div class="stat-label">Files</div>
-                        <div class="stat-value" id="folderFileCount"><i data-lucide="file"></i> -</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-label">Folders</div>
-                        <div class="stat-value" id="folderCount"><i data-lucide="folder"></i> -</div>
-                    </div>
-                    <div class="stat-card full-width">
-                        <div class="stat-label">Total Size</div>
-                        <div class="stat-value" id="folderTotalSize"><i data-lucide="hard-drive"></i> -</div>
-                    </div>
+        <div class="main-content">
+            <div class="toolbar">
+                <button class="menu-btn" onclick="toggleSidebar()">
+                    <i data-lucide="menu"></i>
+                </button>
+                <div class="toolbar-brand" id="toolbarBrand">
+                    <i data-lucide="server"></i><span>File Manager</span>
                 </div>
-            </div>
 
-            <div class="category-buttons">
-                <h4><i data-lucide="folder-tree"></i> Quick Access</h4>
-                <div class="category-grid">
-                    <button class="category-btn" onclick="navigateTo('Videos')"><i data-lucide="video"></i> Videos
+                <div class="search-container">
+                    <div class="search-box">
+                        <i data-lucide="search" class="lucide-search"></i>
+                        <input type="text" id="searchInput" placeholder="Search files across all folders..."
+                            oninput="handleSearch()" autocomplete="off" />
+                    </div>
+                    <div class="search-suggestions" id="searchSuggestions"></div>
+                </div>
+
+                <div class="filter-buttons">
+                    <button class="filter-btn active" onclick="filterFiles('all')">
+                        <i data-lucide="grid"></i> All
                     </button>
-                    <button class="category-btn" onclick="navigateTo('Audio')"><i data-lucide="music"></i> Audio
+                    <button class="filter-btn" onclick="filterFiles('video')">
+                        <i data-lucide="video"></i> Video
                     </button>
-                    <button class="category-btn" onclick="navigateTo('Images')"><i data-lucide="image"></i> Images
+                    <button class="filter-btn" onclick="filterFiles('audio')">
+                        <i data-lucide="music"></i> Audio
                     </button>
-                    <button class="category-btn" onclick="navigateTo('Documents')"><i data-lucide="file-text"></i> Docs
+                    <button class="filter-btn" onclick="filterFiles('image')">
+                        <i data-lucide="image"></i> Image
                     </button>
-                    <button class="category-btn" onclick="navigateTo('Code')"><i data-lucide="code"></i> Code</button>
-                    <button class="category-btn" onclick="navigateTo('Others')"><i data-lucide="file"></i> Others
+                    <button class="filter-btn" onclick="filterFiles('document')">
+                        <i data-lucide="file-text"></i> Docs
+                    </button>
+                    <button class="filter-btn" onclick="filterFiles('folder')">
+                        <i data-lucide="folder"></i> Folders
                     </button>
                 </div>
-            </div>
-
-            <div class="stats-section">
-                <div class="stats-title"><i data-lucide="server"></i><span>System Storage</span></div>
-                <div class="stats-dashboard">
-                    <div class="stat-card full-width">
-                        <div class="stat-label">Used Space</div>
-                        <div class="stat-value" id="storageUsed"><i data-lucide="gauge"></i> -</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-label">Total Files</div>
-                        <div class="stat-value" id="globalFileCount"><i data-lucide="database"></i> -</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-label">Total Size</div>
-                        <div class="stat-value" id="globalTotalSize"><i data-lucide="hard-drive"></i> -</div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="upload-area">
-                <input type="file" id="uploadInput" multiple onchange="uploadFiles()">
-                <button class="upload-btn" onclick="document.getElementById('uploadInput').click()">
-                    <i data-lucide="upload-cloud"></i> <span>Upload Files</span>
+                <button class="icon-btn" onclick="toggleView()" title="Toggle Grid/List">
+                    <i data-lucide="layout-list" id="viewIcon"></i>
+                </button>
+                <button class="icon-btn" onclick="toggleTheme()" title="Toggle Theme">
+                    <i data-lucide="moon" id="themeIcon"></i>
                 </button>
             </div>
 
-            <div class="folder-tree" id="folderTree">
-                <div class="tree-item active" onclick="navigateTo('')"><i data-lucide="folder-root"></i> <span>Root Directory</span>
+            <div class="breadcrumb" id="breadcrumb">
+                <span class="breadcrumb-item active"><i data-lucide="home"></i> Root</span>
+            </div>
+            <div class="file-grid" id="fileGrid">
+                <div class="empty-state">
+                    <i data-lucide="server-off" style="
+                width: 48px;
+                height: 48px;
+                color: var(--text-muted);
+                margin-bottom: 10px;
+              "></i>
+                    <p style="
+                font-weight: 600;
+                font-size: 1.1rem;
+                color: var(--text-main);
+              ">
+                        No Server Connected
+                    </p>
+                    <p style="font-size: 0.9rem">
+                        Connect your local server to view files.
+                    </p>
                 </div>
             </div>
         </div>
     </div>
 
-    <div class="main-content">
-        <div class="toolbar">
-            <button class="menu-btn" onclick="toggleSidebar()"><i data-lucide="menu"></i></button>
-            <div class="toolbar-brand" id="toolbarBrand"><i data-lucide="server"></i><span>File Manager</span></div>
+    <script>
+        // Theme and UI initialization
+        function initTheme() {
+            const savedTheme = localStorage.getItem("theme");
+            if (savedTheme === "dark") document.body.classList.add("dark-theme");
+            updateThemeIcon();
+        }
 
-            <div class="search-container">
-                <div class="search-box">
-                    <i data-lucide="search" class="lucide-search"></i>
-                    <input type="text" id="searchInput" placeholder="Search files..." oninput="handleSearch()"
-                           autocomplete="off">
-                </div>
-                <div class="search-suggestions" id="searchSuggestions"></div>
-            </div>
+        function toggleTheme() {
+            document.body.classList.toggle("dark-theme");
+            localStorage.setItem(
+                "theme",
+                document.body.classList.contains("dark-theme") ? "dark" : "light",
+            );
+            updateThemeIcon();
+        }
 
-            <div class="filter-buttons">
-                <button class="filter-btn active" onclick="filterFiles('all')"><i data-lucide="grid"></i> All</button>
-                <button class="filter-btn" onclick="filterFiles('video')"><i data-lucide="video"></i> Video</button>
-                <button class="filter-btn" onclick="filterFiles('audio')"><i data-lucide="music"></i> Audio</button>
-                <button class="filter-btn" onclick="filterFiles('image')"><i data-lucide="image"></i> Image</button>
-                <button class="filter-btn" onclick="filterFiles('document')"><i data-lucide="file-text"></i> Docs
-                </button>
-                <button class="filter-btn" onclick="filterFiles('folder')"><i data-lucide="folder"></i> Folders</button>
-            </div>
-            <button class="icon-btn" onclick="toggleView()" title="Toggle Grid/List"><i data-lucide="layout-list"
-                                                                                        id="viewIcon"></i></button>
-            <button class="icon-btn" onclick="toggleTheme()" title="Toggle Theme"><i data-lucide="moon"
-                                                                                     id="themeIcon"></i></button>
-        </div>
+        function updateThemeIcon() {
+            const iconEl = document.getElementById("themeIcon");
+            if (iconEl) {
+                iconEl.setAttribute(
+                    "data-lucide",
+                    document.body.classList.contains("dark-theme") ? "sun" : "moon",
+                );
+                lucide.createIcons();
+            }
+        }
 
-        <div class="breadcrumb" id="breadcrumb"><span class="breadcrumb-item active"><i
-                data-lucide="home"></i> Root</span></div>
-        <div class="file-grid" id="fileGrid">
-            <div class="empty-state"><i data-lucide="server-off"
-                                        style="width: 48px; height: 48px; color: var(--text-muted); margin-bottom: 10px;"></i>
-                <p style="font-weight: 600; font-size: 1.1rem; color: var(--text-main);">No Server Connected</p>
-                <p style="font-size: 0.9rem;">Connect your local server to view files.</p></div>
-        </div>
-    </div>
-</div>
+        function toggleSidebar() {
+            const sidebar = document.getElementById("sidebar");
+            if (window.innerWidth <= 900) {
+                const overlay = document.getElementById("mobileOverlay");
+                sidebar.classList.toggle("open");
+                overlay.classList.toggle("active");
+            } else {
+                sidebar.classList.toggle("collapsed");
+            }
+        }
 
-<script>
-    function initTheme() {
-        const savedTheme = localStorage.getItem('theme');
-        if (savedTheme === 'dark') document.body.classList.add('dark-theme');
-        updateThemeIcon();
-    }
+        initTheme();
+        lucide.createIcons();
 
-    function toggleTheme() {
-        document.body.classList.toggle('dark-theme');
-        localStorage.setItem('theme', document.body.classList.contains('dark-theme') ? 'dark' : 'light');
-        updateThemeIcon();
-    }
+        // State variables
+        let currentBaseUrl = "";
+        let currentPath = "";
+        let currentFilter = "all";
+        let currentSearch = "";
+        let allItems = [];
+        let allFilesForSearch = [];
+        let isGridView = true;
+        let currentFolderStats = { fileCount: 0, folderCount: 0, totalSize: 0 };
+        let searchTimeout = null;
 
-    function updateThemeIcon() {
-        const iconEl = document.getElementById('themeIcon');
-        if (iconEl) {
-            iconEl.setAttribute('data-lucide', document.body.classList.contains('dark-theme') ? 'sun' : 'moon');
+        function showToast(message, type = "info") {
+            const toast = document.createElement("div");
+            toast.className = `toast ${type}`;
+            toast.innerHTML = `<i data-lucide="${type === "success" ? "check-circle" : type === "error" ? "alert-circle" : "info"}"></i><span>${message}</span>`;
+            document.body.appendChild(toast);
+            lucide.createIcons({ nodes: [toast] });
+
+            setTimeout(() => {
+                toast.style.opacity = "0";
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+
+        async function autoDetectIp() {
+            const hostname = window.location.hostname;
+            if (
+                hostname !== "localhost" &&
+                hostname !== "127.0.0.1" &&
+                hostname !== ""
+            ) {
+                document.getElementById("serverIp").value = hostname;
+                connectToServer();
+            } else {
+                document.getElementById("serverIp").value = "localhost";
+                connectToServer();
+            }
+        }
+
+        async function connectToServer() {
+            const ip = document.getElementById("serverIp").value.trim();
+            const port = document.getElementById("serverPort").value.trim();
+            if (!ip || !port) return alert("Enter IP and port");
+            currentBaseUrl = `http://${ip}:${port}`;
+            localStorage.setItem("serverIp", ip);
+            localStorage.setItem("serverPort", port);
+            if (window.innerWidth <= 900) toggleSidebar();
+            document.getElementById("fileGrid").innerHTML =
+                '<div class="empty-state"><i data-lucide="loader-2" class="spinner" style="width: 48px; height: 48px; color: var(--primary);"></i><p>Connecting...</p></div>';
+            lucide.createIcons();
+            await loadContents();
+            await loadGlobalStats();
+            await loadFolderTree();
+            await loadAllFilesForSearch();
+        }
+
+        async function loadAllFilesForSearch() {
+            try {
+                const response = await fetch(`${currentBaseUrl}/api/files`);
+                if (response.ok) {
+                    const files = await response.json();
+                    // Also include folders from the tree for search
+                    const treeResponse = await fetch(
+                        `${currentBaseUrl}/api/folders/tree`,
+                    );
+                    if (treeResponse.ok) {
+                        const folders = await treeResponse.json();
+                        const flattenFolders = (items) => {
+                            let result = [];
+                            items.forEach((item) => {
+                                result.push({
+                                    name: item.name,
+                                    path: item.path,
+                                    isDirectory: true,
+                                    contentType: "application/x-directory",
+                                    filename: item.name,
+                                    folderPath: item.path,
+                                });
+                                if (item.children && item.children.length) {
+                                    result = result.concat(flattenFolders(item.children));
+                                }
+                            });
+                            return result;
+                        };
+                        const flatFolders = flattenFolders(folders);
+                        allFilesForSearch = [...files, ...flatFolders];
+                    } else {
+                        allFilesForSearch = files;
+                    }
+                    console.log(
+                        "Loaded all files and folders for search:",
+                        allFilesForSearch.length,
+                    );
+                }
+            } catch (e) {
+                console.error("Failed to load all files:", e);
+                allFilesForSearch = [];
+            }
+        }
+
+        async function loadContents() {
+            try {
+                const url = `${currentBaseUrl}/api/folders/contents?path=${encodeURIComponent(currentPath)}`;
+                const response = await fetch(url);
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                const data = await response.json();
+
+                allItems = [
+                    ...data.folders.map((f) => ({ ...f, isDirectory: true })),
+                    ...data.files,
+                ];
+                currentFolderStats = {
+                    fileCount: data.fileCount || data.files?.length || 0,
+                    folderCount: data.folderCount || data.folders?.length || 0,
+                    totalSize: data.totalSize || 0,
+                };
+                updateFolderStats();
+                displayFiles(allItems);
+                updateBreadcrumb(data.currentPath);
+            } catch (error) {
+                console.error("Load contents error:", error);
+                document.getElementById("fileGrid").innerHTML =
+                    '<div class="empty-state"><i data-lucide="alert-triangle" style="width: 48px; height: 48px; color: var(--danger);"></i><p>Connection failed. Check server status and folder path.</p></div>';
+                lucide.createIcons();
+            }
+        }
+
+        function updateFolderStats() {
+            document.getElementById("folderFileCount").innerHTML =
+                `<i data-lucide="file"></i> ${currentFolderStats.fileCount}`;
+            document.getElementById("folderCount").innerHTML =
+                `<i data-lucide="folder"></i> ${currentFolderStats.folderCount}`;
+            document.getElementById("folderTotalSize").innerHTML =
+                `<i data-lucide="hard-drive"></i> ${formatFileSize(currentFolderStats.totalSize)}`;
             lucide.createIcons();
         }
-    }
 
-    function toggleSidebar() {
-        const sidebar = document.getElementById('sidebar');
-        if (window.innerWidth <= 900) {
-            const overlay = document.getElementById('mobileOverlay');
-            sidebar.classList.toggle('open');
-            overlay.classList.toggle('active');
-        } else {
-            sidebar.classList.toggle('collapsed');
+        async function loadGlobalStats() {
+            try {
+                const [sysRes, filesRes] = await Promise.all([
+                    fetch(`${currentBaseUrl}/api/system/info`),
+                    fetch(`${currentBaseUrl}/api/files`),
+                ]);
+                const sys = await sysRes.json();
+                const files = await filesRes.json();
+                const totalSize = files.reduce((sum, f) => sum + (f.size || 0), 0);
+                document.getElementById("storageUsed").innerHTML =
+                    `<i data-lucide="gauge"></i> ${sys.usedSpaceFormatted} (${sys.usagePercentage}%)`;
+                document.getElementById("globalFileCount").innerHTML =
+                    `<i data-lucide="database"></i> ${files.length}`;
+                document.getElementById("globalTotalSize").innerHTML =
+                    `<i data-lucide="hard-drive"></i> ${formatFileSize(totalSize)}`;
+                lucide.createIcons();
+            } catch (e) {
+                console.error("Failed to load global stats:", e);
+            }
         }
-    }
 
-    initTheme();
-    lucide.createIcons();
+        function handleSearch() {
+            clearTimeout(searchTimeout);
+            const query = document
+                .getElementById("searchInput")
+                .value.toLowerCase();
 
-    let currentBaseUrl = '';
-    let currentPath = '';
-    let currentFilter = 'all';
-    let currentSearch = '';
-    let allItems = [];
-    let isGridView = true;
-    let currentFolderStats = {fileCount: 0, folderCount: 0, totalSize: 0};
-
-    async function autoDetectIp() {
-        const hostname = window.location.hostname;
-        if (hostname !== 'localhost' && hostname !== '127.0.0.1' && hostname !== '') {
-            document.getElementById('serverIp').value = hostname;
-            connectToServer();
-        } else {
-            document.getElementById('serverIp').value = 'localhost';
-            connectToServer();
+            searchTimeout = setTimeout(() => {
+                if (query.length > 0) {
+                    performGlobalSearch(query);
+                } else {
+                    currentSearch = "";
+                    displayFiles(allItems);
+                    document.getElementById("searchSuggestions").style.display = "none";
+                }
+            }, 300);
         }
-    }
 
-    async function connectToServer() {
-        const ip = document.getElementById('serverIp').value.trim();
-        const port = document.getElementById('serverPort').value.trim();
-        if (!ip || !port) return alert('Enter IP and port');
-        currentBaseUrl = `http://${ip}:${port}`;
-        localStorage.setItem('serverIp', ip);
-        localStorage.setItem('serverPort', port);
-        if (window.innerWidth <= 900) toggleSidebar();
-        document.getElementById('fileGrid').innerHTML = '<div class="empty-state"><i data-lucide="loader-2" class="spinner" style="width: 48px; height: 48px; color: var(--primary);"></i><p>Connecting...</p></div>';
-        lucide.createIcons();
-        await loadContents();
-        await loadGlobalStats();
-        await loadFolderTree();
-    }
+        async function performGlobalSearch(query) {
+            if (!currentBaseUrl) return;
 
-    async function loadContents() {
-        try {
-            const url = `${currentBaseUrl}/api/folders/contents?path=${encodeURIComponent(currentPath)}`;
-            const response = await fetch(url);
-            if (!response.ok) throw new Error(`HTTP ${response.status}`);
-            const data = await response.json();
-            allItems = [...data.folders.map(f => ({...f, isDirectory: true})), ...data.files];
-            currentFolderStats = {
-                fileCount: data.fileCount || data.files?.length || 0,
-                folderCount: data.folderCount || data.folders?.length || 0,
-                totalSize: data.totalSize || 0
+            try {
+                // First try to search using the backend API
+                const response = await fetch(
+                    `${currentBaseUrl}/api/search?query=${encodeURIComponent(query)}&folder=${encodeURIComponent(currentPath)}`,
+                );
+
+                let searchResults = [];
+
+                if (response.ok) {
+                    const searchResult = await response.json();
+                    searchResults = searchResult.results || [];
+                } else {
+                    // Fallback: search locally in all loaded files
+                    searchResults = allFilesForSearch.filter((f) =>
+                        (f.filename || f.name || "")
+                            .toLowerCase()
+                            .includes(query.toLowerCase()),
+                    );
+                }
+
+                // Also search in current folder items
+                const currentFolderMatches = allItems.filter((item) =>
+                    (item.name || item.filename || "")
+                        .toLowerCase()
+                        .includes(query.toLowerCase()),
+                );
+
+                // Combine results and remove duplicates
+                const allResults = [...searchResults, ...currentFolderMatches];
+                const uniqueResults = [];
+                const seenPaths = new Set();
+
+                for (const result of allResults) {
+                    const path = result.path || result.filename;
+                    if (!seenPaths.has(path)) {
+                        seenPaths.add(path);
+                        uniqueResults.push(result);
+                    }
+                }
+
+                // Sort by relevance (filename that starts with query first)
+                uniqueResults.sort((a, b) => {
+                    const aName = (a.filename || a.name || "").toLowerCase();
+                    const bName = (b.filename || b.name || "").toLowerCase();
+                    const aStarts = aName.startsWith(query) ? 0 : 1;
+                    const bStarts = bName.startsWith(query) ? 0 : 1;
+                    if (aStarts !== bStarts) return aStarts - bStarts;
+                    return aName.localeCompare(bName);
+                });
+
+                displaySearchResults(uniqueResults);
+
+                // Show suggestions
+                const suggestionsBox = document.getElementById("searchSuggestions");
+                if (uniqueResults.length > 0) {
+                    suggestionsBox.innerHTML = uniqueResults
+                        .slice(0, 5)
+                        .map(
+                            (m) => `
+                        <div class="search-suggestion-item" onclick="selectSuggestion('${escapeHtml((m.filename || m.name).replace(/'/g, "\\'"))}')">
+                            ${getFileIcon({ contentType: m.contentType, isDirectory: m.isDirectory || false })}
+                            <span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${escapeHtml(m.filename || m.name)}</span>
+                            <span style="font-size: 0.7rem; color: var(--text-muted); margin-left: auto;">${m.folderPath || m.parentFolder || (m.isDirectory ? "Folder" : "")}</span>
+                        </div>
+                    `,
+                        )
+                        .join("");
+                    lucide.createIcons();
+                    suggestionsBox.style.display = "block";
+                } else {
+                    suggestionsBox.style.display = "none";
+                }
+            } catch (e) {
+                console.error("Search error:", e);
+                // Fallback: search locally in all files
+                const filtered = allFilesForSearch.filter((f) =>
+                    (f.filename || f.name || "").toLowerCase().includes(query),
+                );
+                displaySearchResults(filtered);
+
+                const suggestionsBox = document.getElementById("searchSuggestions");
+                suggestionsBox.style.display = "none";
+            }
+        }
+
+        function displaySearchResults(results) {
+            const grid = document.getElementById("fileGrid");
+            grid.className = isGridView ? "file-grid" : "file-grid list-view";
+
+            if (!results || results.length === 0) {
+                grid.innerHTML =
+                    '<div class="empty-state"><i data-lucide="search-x" style="width: 48px; height: 48px; color: var(--text-muted); margin-bottom:10px;"></i><p style="font-weight: 600;">No files found matching your search</p><p style="font-size: 0.85rem; color: var(--text-muted);">Try searching with different keywords</p></div>';
+                lucide.createIcons();
+                return;
+            }
+
+            grid.innerHTML = results
+                .map((item, index) => {
+                    const fullPath = normalizePath(item.path || item.filename);
+                    const fileName = item.filename || item.name || "Unknown";
+                    const fileSize = item.size || 0;
+                    const contentType = item.contentType || "";
+                    const folderPath =
+                        item.folderPath ||
+                        item.parentFolder ||
+                        (item.isDirectory ? "" : "Root");
+                    const isDirectory = item.isDirectory || false;
+
+                    if (isDirectory) {
+                        return `
+                <div class="file-card" style="animation-delay: ${Math.min(index * 0.05, 0.4)}s" onclick="navigateTo('${escapeHtml(fullPath).replace(/'/g, "\\'")}')">
+                    <div class="file-card-actions">
+                        <button class="action-btn delete" title="Delete Folder" onclick="event.stopPropagation(); deleteFolder('${escapeHtml(fullPath).replace(/'/g, "\\'")}', '${escapeHtml(fileName).replace(/'/g, "\\'")}')"><i data-lucide="trash-2"></i></button>
+                    </div>
+                    <div class="file-icon-wrapper">${getFileIcon({ isDirectory: true, contentType: "" })}</div>
+                    <div class="file-info">
+                        <div class="file-name" title="${escapeHtml(fileName)}">${escapeHtml(fileName)}</div>
+                        <div class="file-meta">
+                            <span class="badge"><i data-lucide="folder"></i> ${escapeHtml(folderPath !== "Root" ? folderPath : "Root")}</span>
+                        </div>
+                    </div>
+                    <button class="play-btn" onclick="event.stopPropagation(); navigateTo('${escapeHtml(fullPath).replace(/'/g, "\\'")}')"><i data-lucide="folder-open"></i> <span class="btn-text">Open Folder</span></button>
+                </div>
+            `;
+                    } else {
+                        return `
+                <div class="file-card" style="animation-delay: ${Math.min(index * 0.05, 0.4)}s" onclick="playFile('${escapeHtml(fullPath).replace(/'/g, "\\'")}', '${escapeHtml(contentType).replace(/'/g, "\\'")}', '${escapeHtml(fileName).replace(/'/g, "\\'")}', ${fileSize})">
+                    <div class="file-card-actions">
+                        <button class="action-btn" title="Download" onclick="event.stopPropagation(); downloadFile('${escapeHtml(fullPath).replace(/'/g, "\\'")}')"><i data-lucide="download"></i></button>
+                        <button class="action-btn delete" title="Delete" onclick="event.stopPropagation(); deleteFile('${escapeHtml(fullPath).replace(/'/g, "\\'")}')"><i data-lucide="trash-2"></i></button>
+                    </div>
+                    <div class="file-icon-wrapper">${getFileIcon({ contentType: contentType, isDirectory: false })}</div>
+                    <div class="file-info">
+                        <div class="file-name" title="${escapeHtml(fileName)}">${escapeHtml(fileName)}</div>
+                        <div class="file-meta">
+                            <span class="badge"><i data-lucide="folder"></i> ${escapeHtml(folderPath || "Root")}</span>
+                            <span class="badge"><i data-lucide="hard-drive"></i> ${formatFileSize(fileSize)}</span>
+                        </div>
+                    </div>
+                    <button class="play-btn" onclick="event.stopPropagation(); playFile('${escapeHtml(fullPath).replace(/'/g, "\\'")}', '${escapeHtml(contentType).replace(/'/g, "\\'")}', '${escapeHtml(fileName).replace(/'/g, "\\'")}', ${fileSize})"><i data-lucide="play"></i> <span class="btn-text">Open</span></button>
+                </div>
+            `;
+                    }
+                })
+                .join("");
+            lucide.createIcons();
+        }
+
+        function displayFiles(items) {
+            let filtered = items;
+            if (currentSearch) {
+                filtered = filtered.filter((item) =>
+                    (item.name || item.filename)
+                        .toLowerCase()
+                        .includes(currentSearch.toLowerCase()),
+                );
+            }
+            if (currentFilter !== "all") {
+                filtered = filtered.filter((item) => {
+                    if (item.isDirectory) return currentFilter === "folder";
+                    const ct = item.contentType || "";
+                    if (currentFilter === "video") return ct.startsWith("video/");
+                    if (currentFilter === "audio") return ct.startsWith("audio/");
+                    if (currentFilter === "image") return ct.startsWith("image/");
+                    if (currentFilter === "document")
+                        return (
+                            ct === "application/pdf" ||
+                            ct.includes("text") ||
+                            ct.includes("document")
+                        );
+                    return false;
+                });
+            }
+
+            const grid = document.getElementById("fileGrid");
+            grid.className = isGridView ? "file-grid" : "file-grid list-view";
+            if (filtered.length === 0) {
+                grid.innerHTML =
+                    '<div class="empty-state"><i data-lucide="search-x" style="width: 48px; height: 48px; color: var(--text-muted); margin-bottom:10px;"></i><p style="font-weight: 600;">No files found</p></div>';
+                lucide.createIcons();
+                return;
+            }
+
+            grid.innerHTML = filtered
+                .map((item, index) => {
+                    const rawPath = item.path || item.filename;
+                    const fullPath = normalizePath(rawPath);
+                    const fileName = item.name || item.filename;
+                    const fileSize = item.size;
+                    const contentType = item.contentType || "";
+                    const lastModified = item.lastModified;
+
+                    return `
+            <div class="file-card" style="animation-delay: ${Math.min(index * 0.05, 0.4)}s" onclick="handleItemClick(${JSON.stringify(item).replace(/"/g, "&quot;")})">
+                ${!item.isDirectory
+                            ? `<div class="file-card-actions">
+                    <button class="action-btn" title="Download" onclick="event.stopPropagation(); downloadFile('${escapeHtml(fullPath).replace(/'/g, "\\'")}')"><i data-lucide="download"></i></button>
+                    <button class="action-btn delete" title="Delete" onclick="event.stopPropagation(); deleteFile('${escapeHtml(fullPath).replace(/'/g, "\\'")}')"><i data-lucide="trash-2"></i></button>
+                </div>`
+                            : `<div class="file-card-actions">
+                    <button class="action-btn delete" title="Delete Folder" onclick="event.stopPropagation(); deleteFolder('${escapeHtml(fullPath).replace(/'/g, "\\'")}', '${escapeHtml(fileName).replace(/'/g, "\\'")}')"><i data-lucide="trash-2"></i></button>
+                </div>`
+                        }
+                <div class="file-icon-wrapper">${getFileIcon(item)}</div>
+                <div class="file-info">
+                    <div class="file-name" title="${escapeHtml(fileName)}">${escapeHtml(fileName)}</div>
+                    <div class="file-meta">
+                        ${!item.isDirectory ? `<span class="badge"><i data-lucide="hard-drive"></i> ${formatFileSize(fileSize)}</span>` : ""}
+                        ${lastModified ? `<span class="badge"><i data-lucide="calendar"></i> ${formatDate(lastModified)}</span>` : ""}
+                    </div>
+                </div>
+                ${!item.isDirectory ? `<button class="play-btn" onclick="event.stopPropagation(); playFile('${escapeHtml(fullPath).replace(/'/g, "\\'")}', '${escapeHtml(contentType).replace(/'/g, "\\'")}', '${escapeHtml(fileName).replace(/'/g, "\\'")}', ${fileSize || 0})"><i data-lucide="play"></i> <span class="btn-text">Open</span></button>` : ""}
+            </div>
+        `;
+                })
+                .join("");
+            lucide.createIcons();
+        }
+
+        async function createFolder(folderName) {
+            if (!folderName.trim()) {
+                showToast("Folder name cannot be empty", "error");
+                return;
+            }
+
+            const newFolderPath = currentPath
+                ? `${currentPath}/${folderName}`
+                : folderName;
+
+            try {
+                const response = await fetch(
+                    `${currentBaseUrl}/api/folders?path=${encodeURIComponent(newFolderPath)}`,
+                    {
+                        method: "POST",
+                    },
+                );
+
+                if (response.ok) {
+                    showToast(`Folder "${folderName}" created successfully`, "success");
+                    await loadContents();
+                    await loadFolderTree();
+                    await loadAllFilesForSearch();
+                } else {
+                    const error = await response.text();
+                    showToast(`Failed to create folder: ${error}`, "error");
+                }
+            } catch (error) {
+                console.error("Create folder error:", error);
+                showToast("Failed to create folder", "error");
+            }
+        }
+
+        async function deleteFolder(folderPath, folderName) {
+            if (
+                !confirm(
+                    `Are you sure you want to delete folder "${folderName}" and ALL its contents? This action cannot be undone.`,
+                )
+            )
+                return;
+
+            try {
+                const response = await fetch(
+                    `${currentBaseUrl}/api/folders/${encodeURIComponent(folderPath)}`,
+                    {
+                        method: "DELETE",
+                    },
+                );
+
+                if (response.ok) {
+                    showToast(`Folder "${folderName}" deleted successfully`, "success");
+                    await loadContents();
+                    await loadFolderTree();
+                    await loadAllFilesForSearch();
+                } else {
+                    const error = await response.text();
+                    showToast(`Failed to delete folder: ${error}`, "error");
+                }
+            } catch (error) {
+                console.error("Delete folder error:", error);
+                showToast("Failed to delete folder", "error");
+            }
+        }
+
+        function showCreateFolderModal() {
+            const modal = document.createElement("div");
+            modal.className = "modal";
+            modal.innerHTML = `
+            <div class="modal-content">
+                <h3><i data-lucide="folder-plus"></i> Create New Folder</h3>
+                <input type="text" id="newFolderName" placeholder="Folder name" autocomplete="off">
+                <div class="modal-buttons">
+                    <button onclick="this.closest('.modal').remove()" style="background: var(--bg-secondary);">Cancel</button>
+                    <button onclick="createFolderFromModal()" style="background: var(--gradient-primary); color: white;">Create</button>
+                </div>
+            </div>
+        `;
+            document.body.appendChild(modal);
+            lucide.createIcons({ nodes: [modal] });
+
+            const input = modal.querySelector("#newFolderName");
+            input.focus();
+
+            window.createFolderFromModal = () => {
+                const folderName = input.value.trim();
+                if (folderName) {
+                    createFolder(folderName);
+                    modal.remove();
+                } else {
+                    showToast("Please enter a folder name", "warning");
+                }
             };
-            updateFolderStats();
-            displayFiles(allItems);
-            updateBreadcrumb(data.currentPath);
-        } catch (error) {
-            console.error('Load contents error:', error);
-            document.getElementById('fileGrid').innerHTML = '<div class="empty-state"><i data-lucide="alert-triangle" style="width: 48px; height: 48px; color: var(--danger);"></i><p>Connection failed. Check server status and folder path.</p></div>';
-            lucide.createIcons();
-        }
-    }
 
-    function updateFolderStats() {
-        document.getElementById('folderFileCount').innerHTML = `<i data-lucide="file"></i> ${currentFolderStats.fileCount}`;
-        document.getElementById('folderCount').innerHTML = `<i data-lucide="folder"></i> ${currentFolderStats.folderCount}`;
-        document.getElementById('folderTotalSize').innerHTML = `<i data-lucide="hard-drive"></i> ${formatFileSize(currentFolderStats.totalSize)}`;
-        lucide.createIcons();
-    }
-
-    async function loadGlobalStats() {
-        try {
-            const [sysRes, filesRes] = await Promise.all([fetch(`${currentBaseUrl}/api/system/info`), fetch(`${currentBaseUrl}/api/files`)]);
-            const sys = await sysRes.json();
-            const files = await filesRes.json();
-            const totalSize = files.reduce((sum, f) => sum + (f.size || 0), 0);
-            document.getElementById('storageUsed').innerHTML = `<i data-lucide="gauge"></i> ${sys.usedSpaceFormatted} (${sys.usagePercentage}%)`;
-            document.getElementById('globalFileCount').innerHTML = `<i data-lucide="database"></i> ${files.length}`;
-            document.getElementById('globalTotalSize').innerHTML = `<i data-lucide="hard-drive"></i> ${formatFileSize(totalSize)}`;
-            lucide.createIcons();
-        } catch (e) {
-            console.error('Failed to load global stats:', e);
-        }
-    }
-
-    function displayFiles(items) {
-        let filtered = items;
-        if (currentSearch) filtered = filtered.filter(item => (item.name || item.filename).toLowerCase().includes(currentSearch.toLowerCase()));
-        if (currentFilter !== 'all') {
-            filtered = filtered.filter(item => {
-                if (item.isDirectory) return currentFilter === 'folder';
-                const ct = item.contentType || '';
-                if (currentFilter === 'video') return ct.startsWith('video/');
-                if (currentFilter === 'audio') return ct.startsWith('audio/');
-                if (currentFilter === 'image') return ct.startsWith('image/');
-                if (currentFilter === 'document') return ct === 'application/pdf' || ct.includes('text');
-                return false;
+            input.addEventListener("keypress", (e) => {
+                if (e.key === "Enter") window.createFolderFromModal();
             });
         }
 
-        const grid = document.getElementById('fileGrid');
-        grid.className = isGridView ? 'file-grid' : 'file-grid list-view';
-        if (filtered.length === 0) {
-            grid.innerHTML = '<div class="empty-state"><i data-lucide="search-x" style="width: 48px; height: 48px; color: var(--text-muted); margin-bottom:10px;"></i><p style="font-weight: 600;">No files found matching criteria</p></div>';
+        function playFile(path, contentType, name, size) {
+            const normalizedPath = normalizePath(path);
+            const params = new URLSearchParams();
+            params.append("path", normalizedPath);
+            params.append("baseUrl", currentBaseUrl);
+            params.append("type", contentType);
+            params.append("name", name);
+            params.append("size", size);
+            params.append("currentFolder", normalizePath(currentPath));
+
+            const url = `player.html?${params.toString()}`;
+            window.location.href = url;
+        }
+
+        function handleItemClick(item) {
+            if (item.isDirectory) {
+                navigateTo(item.path);
+            } else {
+                const fullPath = normalizePath(item.path || item.filename);
+                playFile(
+                    fullPath,
+                    item.contentType || "",
+                    item.name || item.filename,
+                    item.size,
+                );
+            }
+        }
+
+        function downloadFile(path) {
+            const normalizedPath = normalizePath(path);
+            window.open(
+                `${currentBaseUrl}/api/files/${encodeURIComponent(normalizedPath)}`,
+                "_blank",
+            );
+        }
+
+        async function deleteFile(path) {
+            if (!confirm("Permanently delete this file?")) return;
+            const normalizedPath = normalizePath(path);
+            try {
+                const response = await fetch(
+                    `${currentBaseUrl}/api/files/${encodeURIComponent(normalizedPath)}`,
+                    { method: "DELETE" },
+                );
+                if (response.ok) {
+                    showToast("File deleted successfully", "success");
+                    await loadContents();
+                    await loadGlobalStats();
+                    await loadAllFilesForSearch();
+                } else {
+                    showToast("Delete failed", "error");
+                }
+            } catch (error) {
+                console.error("Delete error:", error);
+                showToast("Delete failed", "error");
+            }
+        }
+
+        async function uploadFiles() {
+            const files = document.getElementById("uploadInput").files;
+            if (!files.length) return;
+
+            const btn = document.querySelector(".upload-btn");
+            const ogText = btn.innerHTML;
+            btn.innerHTML =
+                '<i data-lucide="loader" class="spinner"></i> <span>Uploading...</span>';
+            btn.disabled = true;
             lucide.createIcons();
-            return;
-        }
 
-        grid.innerHTML = filtered.map((item, index) => `
-            <div class="file-card" style="animation-delay: ${Math.min(index * 0.05, 0.4)}s" onclick="handleItemClick(${JSON.stringify(item).replace(/"/g, '&quot;')})">
-                ${!item.isDirectory ? `<div class="file-card-actions">
-                    <button class="action-btn" title="Download" onclick="event.stopPropagation(); downloadFile('${escapeHtml(item.path || item.filename).replace(/'/g, "\\'")}')"><i data-lucide="download"></i></button>
-                    <button class="action-btn delete" title="Delete" onclick="event.stopPropagation(); deleteFile('${escapeHtml(item.path || item.filename).replace(/'/g, "\\'")}')"><i data-lucide="trash-2"></i></button>
-                </div>` : '<div class="file-card-actions"></div>'}
-                <div class="file-icon-wrapper">${getFileIcon(item)}</div>
-                <div class="file-info">
-                    <div class="file-name" title="${escapeHtml(item.name || item.filename)}">${escapeHtml(item.name || item.filename)}</div>
-                    <div class="file-meta">
-                        ${!item.isDirectory ? `<span class="badge"><i data-lucide="hard-drive"></i> ${formatFileSize(item.size)}</span>` : ''}
-                        ${item.lastModified ? `<span class="badge"><i data-lucide="calendar"></i> ${formatDate(item.lastModified)}</span>` : ''}
-                    </div>
-                </div>
-                ${!item.isDirectory ? `<button class="play-btn" onclick="event.stopPropagation(); playFile('${escapeHtml(item.path || item.filename).replace(/'/g, "\\'")}', '${item.contentType || ''}', '${escapeHtml(item.name || item.filename).replace(/'/g, "\\'")}', ${item.size || 0})"><i data-lucide="play"></i> <span class="btn-text">Open</span></button>` : ''}
-            </div>
-        `).join('');
-        lucide.createIcons();
-    }
+            let successCount = 0;
+            let failCount = 0;
 
-    function playFile(path, contentType, name, size) {
-        // Don't double-encode the path - use it as is
-        const params = new URLSearchParams({
-            file: path,  // This already includes folder structure like "Audio/filename.mp3"
-            baseUrl: currentBaseUrl,
-            type: contentType,
-            name: name,
-            size: size,
-            currentFolder: currentPath
-        });
+            for (const file of files) {
+                const formData = new FormData();
+                formData.append("file", file);
+                if (currentPath) formData.append("path", currentPath);
+                try {
+                    const response = await fetch(`${currentBaseUrl}/api/files/upload`, {
+                        method: "POST",
+                        body: formData,
+                    });
+                    if (response.ok) {
+                        successCount++;
+                    } else {
+                        failCount++;
+                    }
+                } catch (error) {
+                    console.error("Upload failed:", file.name);
+                    failCount++;
+                }
+            }
 
-        // Changed '_blank' to '_self' to open in the same tab
-        window.open(`player.html?${params.toString()}`, '_self');
-    }
+            btn.innerHTML = ogText;
+            btn.disabled = false;
+            lucide.createIcons();
+            document.getElementById("uploadInput").value = "";
 
-    function handleItemClick(item) {
-        if (item.isDirectory) {
-            navigateTo(item.path);
-        } else {
-            // Use the full path from the item
-            const fullPath = item.path || item.filename;
-            playFile(fullPath, item.contentType || '', item.name || item.filename, item.size);
-        }
-    }
-
-    async function deleteFile(path) {
-        if (!confirm('Permanently delete this file?')) return;
-        try {
-            const response = await fetch(`${currentBaseUrl}/api/files/${encodeURIComponent(path)}`, {method: 'DELETE'});
-            if (response.ok) {
+            if (successCount > 0) {
+                showToast(
+                    `Uploaded ${successCount} file(s) successfully${failCount > 0 ? `, ${failCount} failed` : ""}`,
+                    successCount > 0 ? "success" : "warning",
+                );
                 await loadContents();
                 await loadGlobalStats();
-            }
-        } catch (error) {
-            alert('Delete failed');
-        }
-    }
-
-    function downloadFile(path) {
-        window.open(`${currentBaseUrl}/api/files/${encodeURIComponent(path)}`, '_blank');
-    }
-
-    async function uploadFiles() {
-        const files = document.getElementById('uploadInput').files;
-        if (!files.length) return;
-        const btn = document.querySelector('.upload-btn');
-        const ogText = btn.innerHTML;
-        btn.innerHTML = '<i data-lucide="loader" class="spinner"></i> <span>Uploading...</span>';
-        lucide.createIcons();
-        for (const file of files) {
-            const formData = new FormData();
-            formData.append('file', file);
-            if (currentPath) formData.append('path', currentPath);
-            try {
-                await fetch(`${currentBaseUrl}/api/files/upload`, {method: 'POST', body: formData});
-            } catch (error) {
-                console.error('Upload failed:', file.name);
+                await loadAllFilesForSearch();
+            } else if (failCount > 0) {
+                showToast("Upload failed", "error");
             }
         }
-        btn.innerHTML = ogText;
-        lucide.createIcons();
-        document.getElementById('uploadInput').value = '';
-        await loadContents();
-        await loadGlobalStats();
-    }
 
-    function navigateTo(path) {
-        currentPath = path || '';
-        document.getElementById('searchInput').value = '';
-        currentSearch = '';
-        loadContents();
-        loadFolderTree();
-    }
-
-    function updateBreadcrumb(path) {
-        const parts = path.split('/').filter(p => p);
-        const breadcrumb = document.getElementById('breadcrumb');
-        let html = `<span class="breadcrumb-item ${parts.length === 0 ? 'active' : ''}" onclick="navigateTo('')"><i data-lucide="home"></i> Root</span>`;
-        parts.forEach((part, i) => {
-            const isLast = i === parts.length - 1;
-            html += `<i data-lucide="chevron-right" style="color:var(--text-muted); width:16px;"></i><span class="breadcrumb-item ${isLast ? 'active' : ''}" onclick="navigateTo('${parts.slice(0, i + 1).join('/')}')">${escapeHtml(part)}</span>`;
-        });
-        breadcrumb.innerHTML = html;
-        lucide.createIcons();
-    }
-
-    function filterFiles(type) {
-        currentFilter = type;
-        document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
-        event.currentTarget.classList.add('active');
-        displayFiles(allItems);
-    }
-
-    // Interactive Search with Suggestions
-    function handleSearch() {
-        currentSearch = document.getElementById('searchInput').value.toLowerCase();
-        const suggestionsBox = document.getElementById('searchSuggestions');
-
-        if (currentSearch.length > 0) {
-            const matches = allItems.filter(item => (item.name || item.filename).toLowerCase().includes(currentSearch)).slice(0, 5);
-
-            if (matches.length > 0) {
-                suggestionsBox.innerHTML = matches.map(m => `
-                    <div class="search-suggestion-item" onclick="selectSuggestion('${escapeHtml((m.name || m.filename).replace(/'/g, "\\'"))}')">
-                        ${getFileIcon(m)}
-                        <span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${escapeHtml(m.name || m.filename)}</span>
-                    </div>
-                `).join('');
-                lucide.createIcons();
-                suggestionsBox.style.display = 'block';
-            } else {
-                suggestionsBox.style.display = 'none';
-            }
-        } else {
-            suggestionsBox.style.display = 'none';
-        }
-
-        displayFiles(allItems);
-    }
-
-    function selectSuggestion(name) {
-        document.getElementById('searchInput').value = name;
-        currentSearch = name.toLowerCase();
-        document.getElementById('searchSuggestions').style.display = 'none';
-        displayFiles(allItems);
-    }
-
-    // Close suggestions dropdown when clicking outside
-    document.addEventListener('click', (e) => {
-        if (!e.target.closest('.search-container')) {
-            const box = document.getElementById('searchSuggestions');
-            if (box) box.style.display = 'none';
-        }
-    });
-
-    function toggleView() {
-        isGridView = !isGridView;
-        document.getElementById('viewIcon').setAttribute('data-lucide', isGridView ? 'layout-list' : 'layout-grid');
-        lucide.createIcons();
-        displayFiles(allItems);
-    }
-
-    async function loadFolderTree() {
-        try {
-            const response = await fetch(`${currentBaseUrl}/api/folders/tree`);
-            const folders = await response.json();
-            const tree = document.getElementById('folderTree');
-            let html = `<div class="tree-item ${currentPath === '' ? 'active' : ''}" onclick="navigateTo('')"><i data-lucide="folder-root"></i> <span>Root Directory</span></div>`;
-            const buildTree = (items, depth = 1) => {
-                items.forEach(f => {
-                    const margin = depth * 0.75;
-                    html += `<div class="tree-item ${currentPath === f.path ? 'active' : ''}" onclick="navigateTo('${f.path}')" style="margin-left:${margin}rem"><i data-lucide="folder"></i> <span style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${escapeHtml(f.name)}</span><span style="font-size:0.7rem; margin-left:auto;">${f.fileCount}</span></div>`;
-                    if (f.children) buildTree(f.children, depth + 1);
-                });
-            };
-            buildTree(folders);
-            tree.innerHTML = html;
-            lucide.createIcons();
-        } catch (e) {
-            console.error('Failed to load folder tree:', e);
-        }
-    }
-
-    function getFileIcon(item) {
-        if (item.isDirectory) return '<i data-lucide="folder" style="color: var(--folder-color);"></i>';
-        const ct = item.contentType || '';
-        if (ct.startsWith('video/')) return '<i data-lucide="film" style="color: var(--video-color);"></i>';
-        if (ct.startsWith('audio/')) return '<i data-lucide="music-4" style="color: var(--audio-color);"></i>';
-        if (ct.startsWith('image/')) return '<i data-lucide="image" style="color: var(--image-color);"></i>';
-        if (ct === 'application/pdf') return '<i data-lucide="file-text" style="color: var(--doc-color);"></i>';
-        return '<i data-lucide="file"></i>';
-    }
-
-    function formatFileSize(bytes) {
-        if (!bytes || bytes === 0) return '0 B';
-        const units = ['B', 'KB', 'MB', 'GB', 'TB'];
-        const i = Math.floor(Math.log(bytes) / Math.log(1024));
-        return `${(bytes / Math.pow(1024, i)).toFixed(1)} ${units[i]}`;
-    }
-
-    function formatDate(date) {
-        return new Date(date).toLocaleDateString(undefined, {month: 'short', day: 'numeric', year: 'numeric'});
-    }
-
-    function escapeHtml(text) {
-        const div = document.createElement('div');
-        div.textContent = text;
-        return div.innerHTML;
-    }
-
-    const savedIp = localStorage.getItem('serverIp');
-    const savedPort = localStorage.getItem('serverPort');
-    if (savedIp) document.getElementById('serverIp').value = savedIp;
-    if (savedPort) document.getElementById('serverPort').value = savedPort;
-    if (savedIp && savedPort) setTimeout(connectToServer, 500);
-
-    setInterval(() => {
-        if (currentBaseUrl) {
-            loadGlobalStats();
+        function navigateTo(path) {
+            currentPath = path || "";
+            document.getElementById("searchInput").value = "";
+            currentSearch = "";
+            loadContents();
             loadFolderTree();
-            if (currentPath !== undefined) loadContents();
         }
-    }, 30000);
-</script>
+
+        function updateBreadcrumb(path) {
+            const parts = path.split("/").filter((p) => p);
+            const breadcrumb = document.getElementById("breadcrumb");
+            let html = `<span class="breadcrumb-item ${parts.length === 0 ? "active" : ""}" onclick="navigateTo('')"><i data-lucide="home"></i> Root</span>`;
+            parts.forEach((part, i) => {
+                const isLast = i === parts.length - 1;
+                html += `<i data-lucide="chevron-right" style="color:var(--text-muted); width:16px;"></i><span class="breadcrumb-item ${isLast ? "active" : ""}" onclick="navigateTo('${parts.slice(0, i + 1).join("/")}')">${escapeHtml(part)}</span>`;
+            });
+            breadcrumb.innerHTML = html;
+            lucide.createIcons();
+        }
+
+        function filterFiles(type) {
+            currentFilter = type;
+            document
+                .querySelectorAll(".filter-btn")
+                .forEach((btn) => btn.classList.remove("active"));
+            event.currentTarget.classList.add("active");
+            if (currentSearch) {
+                performGlobalSearch(currentSearch);
+            } else {
+                displayFiles(allItems);
+            }
+        }
+
+        function selectSuggestion(name) {
+            document.getElementById("searchInput").value = name;
+            currentSearch = name.toLowerCase();
+            document.getElementById("searchSuggestions").style.display = "none";
+            if (currentSearch) {
+                performGlobalSearch(currentSearch);
+            }
+        }
+
+        document.addEventListener("click", (e) => {
+            if (!e.target.closest(".search-container")) {
+                const box = document.getElementById("searchSuggestions");
+                if (box) box.style.display = "none";
+            }
+        });
+
+        function toggleView() {
+            isGridView = !isGridView;
+            document
+                .getElementById("viewIcon")
+                .setAttribute(
+                    "data-lucide",
+                    isGridView ? "layout-list" : "layout-grid",
+                );
+            lucide.createIcons();
+            if (currentSearch) {
+                performGlobalSearch(currentSearch);
+            } else {
+                displayFiles(allItems);
+            }
+        }
+
+        async function loadFolderTree() {
+            try {
+                const response = await fetch(`${currentBaseUrl}/api/folders/tree`);
+                const folders = await response.json();
+                const tree = document.getElementById("folderTree");
+                let html = `<div class="tree-item ${currentPath === "" ? "active" : ""}" onclick="navigateTo('')"><i data-lucide="folder-root"></i> <span>Root Directory</span></div>`;
+                const buildTree = (items, depth = 1) => {
+                    items.forEach((f) => {
+                        const margin = depth * 0.75;
+                        const isActive =
+                            currentPath === f.path || currentPath.startsWith(f.path + "/");
+                        html += `<div class="tree-item ${isActive ? "active" : ""}" onclick="navigateTo('${f.path}')" style="margin-left:${margin}rem"><i data-lucide="folder"></i> <span style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${escapeHtml(f.name)}</span><span style="font-size:0.7rem; margin-left:auto;">${f.fileCount}</span></div>`;
+                        if (f.children && f.children.length > 0)
+                            buildTree(f.children, depth + 1);
+                    });
+                };
+                buildTree(folders);
+                tree.innerHTML = html;
+                lucide.createIcons();
+            } catch (e) {
+                console.error("Failed to load folder tree:", e);
+            }
+        }
+
+        function getFileIcon(item) {
+            if (item.isDirectory)
+                return '<i data-lucide="folder" class="folder-icon"></i>';
+            const ct = item.contentType || "";
+            if (ct.startsWith("video/"))
+                return '<i data-lucide="film" class="video-icon"></i>';
+            if (ct.startsWith("audio/"))
+                return '<i data-lucide="music-4" class="audio-icon"></i>';
+            if (ct.startsWith("image/"))
+                return '<i data-lucide="image" class="image-icon"></i>';
+            if (ct === "application/pdf")
+                return '<i data-lucide="file-text" class="doc-icon"></i>';
+            return '<i data-lucide="file"></i>';
+        }
+
+        function formatFileSize(bytes) {
+            if (!bytes || bytes === 0) return "0 B";
+            const units = ["B", "KB", "MB", "GB", "TB"];
+            const i = Math.floor(Math.log(bytes) / Math.log(1024));
+            return `${(bytes / Math.pow(1024, i)).toFixed(1)} ${units[i]}`;
+        }
+
+        function formatDate(date) {
+            return new Date(date).toLocaleDateString(undefined, {
+                month: "short",
+                day: "numeric",
+                year: "numeric",
+            });
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement("div");
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        function normalizePath(path) {
+            if (!path) return "";
+            return path.replace(/\\/g, "/");
+        }
+
+        const savedIp = localStorage.getItem("serverIp");
+        const savedPort = localStorage.getItem("serverPort");
+        if (savedIp) document.getElementById("serverIp").value = savedIp;
+        if (savedPort) document.getElementById("serverPort").value = savedPort;
+        if (savedIp && savedPort) setTimeout(connectToServer, 500);
+
+        setInterval(() => {
+            if (currentBaseUrl) {
+                loadGlobalStats();
+                loadFolderTree();
+                if (!currentSearch && currentPath !== undefined) loadContents();
+                loadAllFilesForSearch();
+            }
+        }, 30000);
+    </script>
 </body>
+
 </html>

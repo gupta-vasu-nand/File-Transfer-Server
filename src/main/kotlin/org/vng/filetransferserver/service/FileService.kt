@@ -1,26 +1,26 @@
 package org.vng.filetransferserver.service
 
-import org.vng.filetransferserver.dto.*
-import org.springframework.core.io.Resource
 import org.springframework.web.multipart.MultipartFile
+import org.vng.filetransferserver.dto.*
+import java.nio.file.Path
 
 interface FileService {
-    fun uploadFile(file: MultipartFile, subPath: String?): FileUploadResponseDTO
-    fun downloadFile(filename: String): Resource
-    fun getFileMetadata(filename: String): MediaInfoDTO
-    fun deleteFile(filename: String): Boolean
-    fun moveFile(source: String, destination: String): Boolean
-    fun copyFile(source: String, destination: String): Boolean
-    fun renameFile(oldName: String, newName: String): Boolean
-    fun batchDelete(filenames: List<String>): BatchOperationResponseDTO
-    fun batchMove(sources: List<String>, destination: String): BatchOperationResponseDTO
-    fun batchCopy(sources: List<String>, destination: String): BatchOperationResponseDTO
-    fun getFolderContents(path: String?): FolderContentsDTO
-    fun createFolder(path: String): Boolean
-    fun deleteFolder(path: String): Boolean
-    fun moveFolder(source: String, destination: String): Boolean
-    fun searchFiles(query: String, folder: String?): SearchResultDTO
-    fun getAllMediaFiles(): List<MediaInfoDTO>
+    fun uploadFile(file: MultipartFile, folderPath: String?): FileUploadResponseDTO
+    fun downloadFile(path: String): Path
+    fun deleteFile(path: String): Boolean
+    fun getFileMetadata(path: String): FileMetadataDTO
+    fun listAllFiles(): List<MediaInfoDTO>
+    fun moveFile(sourcePath: String, destinationPath: String): Boolean
+    fun copyFile(sourcePath: String, destinationPath: String): Boolean
+    fun renameFile(path: String, newName: String): Boolean
+    fun getFolderContents(folderPath: String?): FolderContentsDTO
+    fun createFolder(folderPath: String): Boolean
+    fun deleteFolder(folderPath: String): Boolean
+    fun moveFolder(sourcePath: String, destinationPath: String): Boolean
+    fun getFolderTree(): List<FolderInfoDTO>
+    fun searchFiles(query: String, folderPath: String?): SearchResultDTO
+    fun batchOperation(request: BatchOperationDTO): BatchOperationResponseDTO
     fun getSystemInfo(): FileSystemInfoDTO
-    fun getFileTree(): List<FolderInfoDTO>
+    fun getFilePreview(path: String): Path
+    fun getThumbnail(path: String): Path?
 }

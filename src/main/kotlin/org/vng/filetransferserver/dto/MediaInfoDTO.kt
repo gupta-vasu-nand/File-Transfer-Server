@@ -17,8 +17,7 @@ data class MediaInfoDTO(
     val resolution: String? = null,
     val videoCodec: String? = null,
     val audioCodec: String? = null,
-    val hasAudio: Boolean = true,
+    val hasAudio: Boolean = false,
     val streamUrl: String,
-    val downloadUrl: String,
-    val isDirectory: Boolean = false
+    val downloadUrl: String
 )

@@ -1,17 +1,18 @@
 package org.vng.filetransferserver.controller
 
-import org.vng.filetransferserver.dto.*
-import org.vng.filetransferserver.service.FileService
-import org.vng.filetransferserver.service.StreamingService
-import org.vng.filetransferserver.util.FileUtils
 import mu.KotlinLogging
-import org.springframework.core.io.Resource
+import org.springframework.core.io.FileSystemResource
 import org.springframework.http.HttpHeaders
+import org.springframework.http.MediaType
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.*
 import org.springframework.web.multipart.MultipartFile
+import org.vng.filetransferserver.dto.*
+import org.vng.filetransferserver.service.FileService
+import org.vng.filetransferserver.service.StreamingService
 import jakarta.servlet.http.HttpServletRequest
-import java.io.File
+import jakarta.servlet.http.HttpServletResponse
+import java.nio.file.Files
 
 private val logger = KotlinLogging.logger {}
 
@@ -26,40 +27,49 @@ class MediaController(
     @PostMapping("/files/upload")
     fun uploadFile(
         @RequestParam("file") file: MultipartFile,
-        @RequestParam(value = "path", required = false) path: String?
+        @RequestParam(value = "path", required = false) folderPath: String?
     ): ResponseEntity<FileUploadResponseDTO> {
-        logger.info { "Uploading file: ${file.originalFilename}" }
-        val response = fileService.uploadFile(file, path)
+        logger.info { "POST /api/files/upload - file: ${file.originalFilename}, folder: $folderPath" }
+        val response = fileService.uploadFile(file, folderPath)
         return ResponseEntity.ok(response)
     }
 
     @GetMapping("/files")
-    fun listFiles(): ResponseEntity<List<MediaInfoDTO>> {
-        val files = fileService.getAllMediaFiles()
+    fun listAllFiles(): ResponseEntity<List<MediaInfoDTO>> {
+        logger.info { "GET /api/files" }
+        val files = fileService.listAllFiles()
         return ResponseEntity.ok(files)
     }
 
-    // Fixed: Use path variable with proper pattern
     @GetMapping("/files/{filename:.+}")
-    fun downloadFile(@PathVariable filename: String): ResponseEntity<Resource> {
-        logger.info { "Downloading file: $filename" }
-        val resource = fileService.downloadFile(filename)
-        val contentType = FileUtils.detectContentType(filename)
+    fun downloadFile(
+        @PathVariable filename: String,
+        response: HttpServletResponse
+    ) {
+        logger.info { "GET /api/files/$filename" }
+        val filePath = fileService.downloadFile(filename)
+        val file = filePath.toFile()
 
-        return ResponseEntity.ok()
-            .header(HttpHeaders.CONTENT_TYPE, contentType)
-            .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"${File(filename).name}\"")
-            .body(resource)
+        response.setHeader(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"${file.name}\"")
+        response.setHeader(HttpHeaders.CONTENT_LENGTH, file.length().toString())
+        response.contentType = MediaType.APPLICATION_OCTET_STREAM_VALUE
+
+        FileSystemResource(file).inputStream.use { input ->
+            input.copyTo(response.outputStream)
+        }
+        response.outputStream.flush()
     }
 
     @DeleteMapping("/files/{filename:.+}")
     fun deleteFile(@PathVariable filename: String): ResponseEntity<Map<String, Any>> {
+        logger.info { "DELETE /api/files/$filename" }
         fileService.deleteFile(filename)
-        return ResponseEntity.ok(mapOf("message" to "File deleted successfully"))
+        return ResponseEntity.ok(mapOf("success" to true, "message" to "File deleted successfully"))
     }
 
     @GetMapping("/files/{filename:.+}/metadata")
-    fun getFileMetadata(@PathVariable filename: String): ResponseEntity<MediaInfoDTO> {
+    fun getFileMetadata(@PathVariable filename: String): ResponseEntity<FileMetadataDTO> {
+        logger.info { "GET /api/files/$filename/metadata" }
         val metadata = fileService.getFileMetadata(filename)
         return ResponseEntity.ok(metadata)
     }
@@ -69,8 +79,9 @@ class MediaController(
         @RequestParam source: String,
         @RequestParam destination: String
     ): ResponseEntity<Map<String, Any>> {
-        fileService.moveFile(source, destination)
-        return ResponseEntity.ok(mapOf("message" to "File moved successfully"))
+        logger.info { "PUT /api/files/move - source: $source, destination: $destination" }
+        val success = fileService.moveFile(source, destination)
+        return ResponseEntity.ok(mapOf("success" to success))
     }
 
     @PutMapping("/files/copy")
@@ -78,91 +89,45 @@ class MediaController(
         @RequestParam source: String,
         @RequestParam destination: String
     ): ResponseEntity<Map<String, Any>> {
-        fileService.copyFile(source, destination)
-        return ResponseEntity.ok(mapOf("message" to "File copied successfully"))
+        logger.info { "PUT /api/files/copy - source: $source, destination: $destination" }
+        val success = fileService.copyFile(source, destination)
+        return ResponseEntity.ok(mapOf("success" to success))
     }
 
     @PutMapping("/files/rename")
     fun renameFile(
-        @RequestParam oldName: String,
+        @RequestParam path: String,
         @RequestParam newName: String
     ): ResponseEntity<Map<String, Any>> {
-        fileService.renameFile(oldName, newName)
-        return ResponseEntity.ok(mapOf("message" to "File renamed successfully"))
+        logger.info { "PUT /api/files/rename - path: $path, newName: $newName" }
+        val success = fileService.renameFile(path, newName)
+        return ResponseEntity.ok(mapOf("success" to success))
     }
 
-    @DeleteMapping("/files/batch")
-    fun batchDelete(@RequestBody filenames: List<String>): ResponseEntity<BatchOperationResponseDTO> {
-        val response = fileService.batchDelete(filenames)
-        return ResponseEntity.ok(response)
-    }
-
-    // Media Streaming Endpoints - Fixed patterns
-    @GetMapping("/stream/{filename:.+}")
-    fun streamMedia(
-        @PathVariable filename: String,
-        request: HttpServletRequest
-    ): ResponseEntity<Resource> {
-        return streamingService.streamMedia(filename, request)
-    }
-
-    @GetMapping("/media")
-    fun listMedia(): ResponseEntity<List<MediaInfoDTO>> {
-        val media = fileService.getAllMediaFiles()
-        return ResponseEntity.ok(media)
-    }
-
-    @GetMapping("/media/{filename:.+}/info")
-    fun getMediaInfo(@PathVariable filename: String): ResponseEntity<MediaInfoDTO> {
-        val info = streamingService.getMediaInfo(filename)
-        return ResponseEntity.ok(info)
-    }
-
-    @GetMapping("/preview/{filename:.+}")
-    fun previewFile(@PathVariable filename: String): ResponseEntity<Resource> {
-        val resource = streamingService.getPreview(filename)
-        if (resource == null) {
-            return ResponseEntity.notFound().build()
-        }
-
-        val contentType = FileUtils.detectContentType(filename)
-        return ResponseEntity.ok()
-            .header(HttpHeaders.CONTENT_TYPE, contentType)
-            .body(resource)
-    }
-
-    @GetMapping("/thumbnail/{filename:.+}")
-    fun getThumbnail(@PathVariable filename: String): ResponseEntity<Resource> {
-        val resource = streamingService.getThumbnail(filename)
-        if (resource == null) {
-            return ResponseEntity.notFound().build()
-        }
-
-        val contentType = FileUtils.detectContentType(filename)
-        return ResponseEntity.ok()
-            .header(HttpHeaders.CONTENT_TYPE, contentType)
-            .body(resource)
-    }
-
-    // Folder Management Endpoints - Fixed patterns
+    // Folder Management Endpoints
     @GetMapping("/folders/contents")
     fun getFolderContents(
-        @RequestParam(required = false) path: String?
+        @RequestParam(value = "path", required = false, defaultValue = "") path: String
     ): ResponseEntity<FolderContentsDTO> {
-        val contents = fileService.getFolderContents(path)
+        logger.info { "GET /api/folders/contents - path: $path" }
+        val contents = fileService.getFolderContents(path.ifEmpty { null })
         return ResponseEntity.ok(contents)
     }
 
     @PostMapping("/folders")
-    fun createFolder(@RequestParam path: String): ResponseEntity<Map<String, Any>> {
-        fileService.createFolder(path)
-        return ResponseEntity.ok(mapOf("message" to "Folder created successfully"))
+    fun createFolder(
+        @RequestParam(value = "path") folderPath: String
+    ): ResponseEntity<Map<String, Any>> {
+        logger.info { "POST /api/folders - path: $folderPath" }
+        val success = fileService.createFolder(folderPath)
+        return ResponseEntity.ok(mapOf("success" to success))
     }
 
     @DeleteMapping("/folders/{path:.+}")
     fun deleteFolder(@PathVariable path: String): ResponseEntity<Map<String, Any>> {
-        fileService.deleteFolder(path)
-        return ResponseEntity.ok(mapOf("message" to "Folder deleted successfully"))
+        logger.info { "DELETE /api/folders/$path" }
+        val success = fileService.deleteFolder(path)
+        return ResponseEntity.ok(mapOf("success" to success))
     }
 
     @PutMapping("/folders/move")
@@ -170,44 +135,97 @@ class MediaController(
         @RequestParam source: String,
         @RequestParam destination: String
     ): ResponseEntity<Map<String, Any>> {
-        fileService.moveFolder(source, destination)
-        return ResponseEntity.ok(mapOf("message" to "Folder moved successfully"))
-    }
-
-    // Search Endpoints
-    @GetMapping("/search")
-    fun searchFiles(
-        @RequestParam query: String,
-        @RequestParam(required = false) folder: String?
-    ): ResponseEntity<SearchResultDTO> {
-        val results = fileService.searchFiles(query, folder)
-        return ResponseEntity.ok(results)
-    }
-
-    // System Endpoints
-    @GetMapping("/system/info")
-    fun getSystemInfo(): ResponseEntity<FileSystemInfoDTO> {
-        val info = fileService.getSystemInfo()
-        return ResponseEntity.ok(info)
+        logger.info { "PUT /api/folders/move - source: $source, destination: $destination" }
+        val success = fileService.moveFolder(source, destination)
+        return ResponseEntity.ok(mapOf("success" to success))
     }
 
     @GetMapping("/folders/tree")
     fun getFolderTree(): ResponseEntity<List<FolderInfoDTO>> {
-        val tree = fileService.getFileTree()
+        logger.info { "GET /api/folders/tree" }
+        val tree = fileService.getFolderTree()
         return ResponseEntity.ok(tree)
+    }
+
+    // Streaming Endpoints
+    @GetMapping("/stream")
+    fun streamMedia(
+        @RequestParam("path") path: String,
+        request: HttpServletRequest,
+        response: HttpServletResponse
+    ) {
+        logger.info { "GET /api/stream - path: $path" }
+        streamingService.streamMedia(path, request, response)
+    }
+
+    @GetMapping("/media")
+    fun listMediaFiles(): ResponseEntity<List<Map<String, Any?>>> {
+        logger.info { "GET /api/media" }
+        val mediaFiles = streamingService.listMediaFiles()
+        return ResponseEntity.ok(mediaFiles)
+    }
+
+    @GetMapping("/media/info")
+    fun getMediaInfo(@RequestParam("path") path: String): ResponseEntity<Map<String, Any?>> {
+        logger.info { "GET /api/media/info - path: $path" }
+        val info = streamingService.getMediaInfo(path)
+        return ResponseEntity.ok(info)
+    }
+
+    // Search and System Endpoints
+    @GetMapping("/search")
+    fun searchFiles(
+        @RequestParam query: String,
+        @RequestParam(value = "folder", required = false) folderPath: String?
+    ): ResponseEntity<SearchResultDTO> {
+        logger.info { "GET /api/search - query: $query, folder: $folderPath" }
+        val results = fileService.searchFiles(query, folderPath)
+        return ResponseEntity.ok(results)
+    }
+
+    @GetMapping("/system/info")
+    fun getSystemInfo(): ResponseEntity<FileSystemInfoDTO> {
+        logger.info { "GET /api/system/info" }
+        val info = fileService.getSystemInfo()
+        return ResponseEntity.ok(info)
+    }
+
+    // Preview Endpoints
+    @GetMapping("/preview")
+    fun getFilePreview(@RequestParam("path") path: String, response: HttpServletResponse) {
+        logger.info { "GET /api/preview - path: $path" }
+        val filePath = fileService.getFilePreview(path)
+        val file = filePath.toFile()
+        val contentType = fileService.getFileMetadata(path).contentType
+
+        response.setHeader(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"${file.name}\"")
+        response.setHeader(HttpHeaders.CONTENT_LENGTH, file.length().toString())
+        response.contentType = contentType
+
+        FileSystemResource(file).inputStream.use { input ->
+            input.copyTo(response.outputStream)
+        }
+        response.outputStream.flush()
+    }
+
+    @GetMapping("/thumbnail")
+    fun getThumbnail(@RequestParam("path") path: String): ResponseEntity<ByteArray> {
+        logger.info { "GET /api/thumbnail - path: $path" }
+        val thumbnailPath = fileService.getThumbnail(path)
+        if (thumbnailPath != null && Files.exists(thumbnailPath)) {
+            val bytes = Files.readAllBytes(thumbnailPath)
+            return ResponseEntity.ok()
+                .contentType(MediaType.IMAGE_JPEG)
+                .body(bytes)
+        }
+        return ResponseEntity.notFound().build()
     }
 
     // Batch Operations
     @PostMapping("/batch")
-    fun batchOperation(@RequestBody batchOp: BatchOperationDTO): ResponseEntity<BatchOperationResponseDTO> {
-        val response = when (batchOp.operation.uppercase()) {
-            "DELETE" -> fileService.batchDelete(batchOp.sources)
-            "MOVE" -> fileService.batchMove(batchOp.sources, batchOp.destination ?: "")
-            "COPY" -> fileService.batchCopy(batchOp.sources, batchOp.destination ?: "")
-            else -> BatchOperationResponseDTO(0, batchOp.sources.size,
-                batchOp.sources.map { BatchOperationResult(it, false, "Unknown operation") },
-                "Batch operation failed")
-        }
+    fun batchOperation(@RequestBody request: BatchOperationDTO): ResponseEntity<BatchOperationResponseDTO> {
+        logger.info { "POST /api/batch - operation: ${request.operation}, files: ${request.files.size}" }
+        val response = fileService.batchOperation(request)
         return ResponseEntity.ok(response)
     }
 }

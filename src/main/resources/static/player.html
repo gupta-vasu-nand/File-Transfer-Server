@@ -1,1503 +1,2114 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
+    />
     <title>Media Player - Media Hub</title>
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
-        :root {
-            --primary: #f97316;
-            --gradient-primary: linear-gradient(135deg, #f97316 0%, #ef4444 100%);
-            --bg-main: #000000;
-            --bg-secondary: #0a0a0a;
-            --surface: #111111;
-            --surface-hover: #1a1a1a;
-            --text-main: #f8fafc;
-            --text-muted: #94a3b8;
-            --border: #222222;
-            --shadow-sm: 0 4px 6px -1px rgb(0 0 0 / 0.5);
-            --shadow-lg: 0 10px 25px -3px rgb(0 0 0 / 0.7);
-            --shadow-glow: 0 4px 14px rgba(249, 115, 22, 0.25);
-            --radius-lg: 16px;
-            --animation-timing: cubic-bezier(0.175, 0.885, 0.32, 1.275);
-            --ambient-tl: #000;
-            --ambient-tr: #000;
-            --ambient-bl: #000;
-            --ambient-br: #000;
-        }
+      :root {
+        --primary: #f97316;
+        --gradient-primary: linear-gradient(135deg, #f97316 0%, #ef4444 100%);
+        --bg-main: #000000;
+        --bg-secondary: #0a0a0a;
+        --surface: rgba(17, 17, 17, 0.85);
+        --surface-solid: #111111;
+        --surface-hover: rgba(26, 26, 26, 0.95);
+        --text-main: #f8fafc;
+        --text-muted: #94a3b8;
+        --border: rgba(255, 255, 255, 0.1);
+        --shadow-sm: 0 4px 6px -1px rgba(0, 0, 0, 0.5);
+        --shadow-lg: 0 10px 25px -3px rgba(0, 0, 0, 0.7);
+        --shadow-glow: 0 4px 14px rgba(249, 115, 22, 0.35);
+        --radius-lg: 16px;
+        --animation-timing: cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        --ambient-tl: #000;
+        --ambient-tr: #000;
+        --ambient-bl: #000;
+        --ambient-br: #000;
+      }
 
-        body.light-theme {
-            --bg-main: #f8fafc;
-            --bg-secondary: #f1f5f9;
-            --surface: #ffffff;
-            --surface-hover: #f1f5f9;
-            --text-main: #0f172a;
-            --text-muted: #64748b;
-            --border: #e2e8f0;
-            --shadow-sm: 0 1px 2px 0 rgb(0 0 0/.05);
-            --shadow-lg: 0 10px 25px -3px rgb(0 0 0/.1);
-            --shadow-glow: 0 4px 14px rgba(249, 115, 22, .15);
-        }
+      body.light-theme {
+        --bg-main: #f8fafc;
+        --bg-secondary: #f1f5f9;
+        --surface: rgba(255, 255, 255, 0.85);
+        --surface-solid: #ffffff;
+        --surface-hover: rgba(241, 245, 249, 0.95);
+        --text-main: #0f172a;
+        --text-muted: #64748b;
+        --border: rgba(0, 0, 0, 0.08);
+        --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+        --shadow-lg: 0 10px 25px -3px rgba(0, 0, 0, 0.1);
+        --shadow-glow: 0 4px 14px rgba(249, 115, 22, 0.2);
+      }
 
-        *, *::before, *::after {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            -webkit-tap-highlight-color: transparent;
-        }
+      *,
+      *::before,
+      *::after {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+        -webkit-tap-highlight-color: transparent;
+      }
 
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: var(--bg-main);
-            color: var(--text-main);
-            min-height: 100vh;
-            transition: background-color .4s, color .4s;
-            overflow-x: hidden;
-        }
+      body {
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        background: var(--bg-main);
+        color: var(--text-main);
+        min-height: 100vh;
+        transition:
+          background-color 0.4s,
+          color 0.4s;
+        overflow-x: hidden;
+      }
 
-        @keyframes fadeInScale {
-            from {
-                opacity: 0;
-                transform: scale(.95) translateY(15px);
-            }
-            to {
-                opacity: 1;
-                transform: scale(1) translateY(0);
-            }
+      @keyframes fadeInScale {
+        from {
+          opacity: 0;
+          transform: scale(0.95) translateY(15px);
         }
-
-        @keyframes slideUp {
-            from {
-                opacity: 0;
-                transform: translateY(20px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
+        to {
+          opacity: 1;
+          transform: scale(1) translateY(0);
         }
+      }
 
-        @keyframes spin {
-            to {
-                transform: rotate(360deg);
-            }
+      @keyframes slideUp {
+        from {
+          opacity: 0;
+          transform: translateY(20px);
         }
-
-        /* ── Layout ── */
-        .container {
-            width: 100%;
-            max-width: 1400px;
-            margin: 0 auto;
-            padding: clamp(8px, 3vw, 24px);
+        to {
+          opacity: 1;
+          transform: translateY(0);
         }
+      }
 
-        .header {
-            background: var(--surface);
-            border-radius: var(--radius-lg);
-            padding: clamp(10px, 2vw, 16px) clamp(12px, 2.5vw, 20px);
-            margin-bottom: 16px;
-            border: 1px solid var(--border);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            flex-wrap: wrap;
-            gap: 12px;
-            box-shadow: var(--shadow-sm);
-            animation: fadeInScale .5s var(--animation-timing) forwards;
+      @keyframes pulseGlow {
+        0% {
+          box-shadow: 0 0 15px rgba(249, 115, 22, 0.2);
         }
-
-        .header h1 {
-            font-size: clamp(1.1rem, 4vw, 1.4rem);
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            background: var(--gradient-primary);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            font-weight: 800;
+        50% {
+          box-shadow: 0 0 30px rgba(249, 115, 22, 0.5);
         }
-
-        .header-actions {
-            display: flex;
-            align-items: center;
-            gap: 8px;
+        100% {
+          box-shadow: 0 0 15px rgba(249, 115, 22, 0.2);
         }
+      }
 
-        .btn-base {
-            padding: 8px 16px;
-            background: var(--bg-secondary);
-            color: var(--text-main);
-            border: 1px solid var(--border);
-            border-radius: 8px;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 6px;
-            text-decoration: none;
-            font-weight: 600;
-            font-size: clamp(.85rem, 2.5vw, .95rem);
-            transition: all .3s;
-            white-space: nowrap;
-        }
+      /* ── Layout ── */
+      .container {
+        width: 100%;
+        max-width: 1400px;
+        margin: 0 auto;
+        padding: clamp(8px, 3vw, 24px);
+      }
 
-        .btn-base:hover {
-            background: var(--surface-hover);
-            border-color: var(--text-muted);
-        }
+      .header {
+        background: var(--surface);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        border-radius: var(--radius-lg);
+        padding: clamp(10px, 2vw, 16px) clamp(12px, 2.5vw, 20px);
+        margin-bottom: 16px;
+        border: 1px solid var(--border);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 12px;
+        box-shadow: var(--shadow-sm);
+        animation: fadeInScale 0.5s var(--animation-timing) forwards;
+      }
 
-        .icon-only-btn {
-            padding: 8px;
-            border-radius: 8px;
-        }
+      .header h1 {
+        font-size: clamp(1.1rem, 4vw, 1.4rem);
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        background: var(--gradient-primary);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        font-weight: 800;
+      }
 
-        /* ── Ambilight & Player Base ── */
-        .player-container {
-            position: relative;
-            margin: 0 auto 20px auto;
-            border-radius: var(--radius-lg);
-            opacity: 0;
-            animation: fadeInScale .6s var(--animation-timing) .1s forwards;
-            width: fit-content;
-            max-width: 100%;
-            min-width: 280px;
-        }
+      .header-actions {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
 
-        .player-container[data-type="audio"], .player-container[data-type="pdf"],
-        .player-container[data-type="code"], .player-container[data-type="other"] {
-            width: 100%;
-        }
+      .btn-base {
+        padding: 8px 16px;
+        background: var(--surface-solid);
+        color: var(--text-main);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        text-decoration: none;
+        font-weight: 600;
+        font-size: clamp(0.85rem, 2.5vw, 0.95rem);
+        transition: all 0.3s;
+        white-space: nowrap;
+      }
 
-        .player-container.ambient-active::before {
-            content: '';
-            position: absolute;
-            inset: -28px;
-            z-index: 0;
-            border-radius: 36px;
-            background: radial-gradient(ellipse at top left, var(--ambient-tl) 0%, transparent 60%),
-            radial-gradient(ellipse at top right, var(--ambient-tr) 0%, transparent 60%),
-            radial-gradient(ellipse at bottom left, var(--ambient-bl) 0%, transparent 60%),
-            radial-gradient(ellipse at bottom right, var(--ambient-br) 0%, transparent 60%);
-            filter: blur(32px);
-            opacity: .75;
-            pointer-events: none;
-            transition: background .12s linear;
-        }
+      .btn-base:hover {
+        background: var(--surface-hover);
+        border-color: var(--primary);
+        color: var(--primary);
+        transform: translateY(-2px);
+      }
 
-        #ambientCanvas {
-            display: none;
-        }
+      .icon-only-btn {
+        padding: 8px;
+        border-radius: 8px;
+      }
 
+      /* ── Ambilight & Player Base ── */
+      .player-container {
+        position: relative;
+        margin: 0 auto 20px auto;
+        border-radius: var(--radius-lg);
+        opacity: 0;
+        animation: fadeInScale 0.6s var(--animation-timing) 0.1s forwards;
+        width: fit-content;
+        max-width: 100%;
+        min-width: 280px;
+      }
+
+      .player-container[data-type="audio"],
+      .player-container[data-type="pdf"],
+      .player-container[data-type="code"],
+      .player-container[data-type="other"] {
+        width: 100%;
+      }
+
+      .player-container.ambient-active::before {
+        content: "";
+        position: absolute;
+        inset: -28px;
+        z-index: 0;
+        border-radius: 36px;
+        background:
+          radial-gradient(
+            ellipse at top left,
+            var(--ambient-tl) 0%,
+            transparent 60%
+          ),
+          radial-gradient(
+            ellipse at top right,
+            var(--ambient-tr) 0%,
+            transparent 60%
+          ),
+          radial-gradient(
+            ellipse at bottom left,
+            var(--ambient-bl) 0%,
+            transparent 60%
+          ),
+          radial-gradient(
+            ellipse at bottom right,
+            var(--ambient-br) 0%,
+            transparent 60%
+          );
+        filter: blur(32px);
+        opacity: 0.75;
+        pointer-events: none;
+        transition: background 0.12s linear;
+      }
+
+      #ambientCanvas {
+        display: none;
+      }
+
+      .player-wrapper {
+        background: #050505;
+        border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+        overflow: hidden;
+        box-shadow: var(--shadow-lg);
+        position: relative;
+        z-index: 1;
+        border: 1px solid var(--border);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        width: 100%;
+      }
+
+      .player-container:not([data-type="video"]):not([data-type="image"])
         .player-wrapper {
-            background: #000;
-            border-radius: var(--radius-lg) var(--radius-lg) 0 0;
-            overflow: hidden;
-            box-shadow: var(--shadow-lg);
-            position: relative;
-            z-index: 1;
-            border: 1px solid rgba(255, 255, 255, .05);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-        }
+        min-height: clamp(200px, 40vh, 400px);
+      }
 
-        .player-container:not([data-type="video"]):not([data-type="image"]) .player-wrapper {
-            min-height: clamp(200px, 40vh, 500px);
-        }
+      /* Audio Visualizer Container */
+      .audio-view {
+        position: relative;
+        width: 100%;
+        height: 100%;
+        min-height: clamp(200px, 40vh, 400px);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        background: radial-gradient(circle at center, #1a1a1a 0%, #000000 100%);
+      }
 
-        video, .image-viewer {
-            width: auto;
-            height: auto;
-            max-height: 75vh;
-            max-width: 100%;
-            display: block;
-            outline: none;
-            margin: 0 auto;
-        }
+      .audio-icon-wrapper {
+        position: absolute;
+        z-index: 2;
+        width: 80px;
+        height: 80px;
+        border-radius: 50%;
+        background: var(--surface-solid);
+        border: 2px solid var(--border);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--primary);
+        box-shadow: var(--shadow-glow);
+      }
 
-        audio {
-            padding: clamp(20px, 5vw, 60px) 20px;
-            background: var(--surface);
-            width: 100%;
-            outline: none;
-        }
+      .audio-icon-wrapper.playing {
+        animation: pulseGlow 2s infinite;
+      }
 
-        .doc-viewer, .code-viewer {
-            width: 100%;
-            height: 75vh;
-            border: none;
-        }
+      #visualizerCanvas {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        z-index: 1;
+      }
 
-        .code-viewer {
-            overflow: auto;
-            padding: 20px;
-            background: #0d0d0d;
-            color: #d4d4d4;
-            font-family: 'Courier New', monospace;
-            font-size: 14px;
-            line-height: 1.6;
-        }
+      video,
+      .image-viewer {
+        width: auto;
+        height: auto;
+        max-height: 75vh;
+        max-width: 100%;
+        display: block;
+        outline: none;
+        margin: 0 auto;
+      }
 
-        /* ── Controls shell ── */
-        .player-controls {
-            padding: clamp(12px, 3vw, 20px);
-            background: var(--surface);
-            border: 1px solid var(--border);
-            border-top: none;
-            border-radius: 0 0 var(--radius-lg) var(--radius-lg);
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-            position: relative;
-            z-index: 1;
-            box-shadow: var(--shadow-lg);
-            width: 100%;
-        }
+      audio {
+        display: none; /* Hidden, using custom controls & visualizer */
+      }
 
-        /* ── Seekbar + Timers ── */
-        .seek-section {
-            display: none;
-            flex-direction: column;
-            gap: 6px;
-            width: 100%;
-        }
+      .doc-viewer,
+      .code-viewer {
+        width: 100%;
+        height: 75vh;
+        border: none;
+      }
 
-        .time-row {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 0 4px;
-        }
+      .code-viewer {
+        overflow: auto;
+        padding: 20px;
+        background: #0d0d0d;
+        color: #d4d4d4;
+        font-family: "Courier New", monospace;
+        font-size: 14px;
+        line-height: 1.6;
+        width: 100%;
+      }
 
-        .time-elapsed, .time-countdown {
-            font-size: clamp(.75rem, 2vw, .85rem);
-            font-weight: 700;
-            font-variant-numeric: tabular-nums;
-            letter-spacing: .5px;
-        }
+      /* ── Controls shell ── */
+      .player-controls {
+        padding: clamp(12px, 3vw, 20px);
+        background: var(--surface);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        border: 1px solid var(--border);
+        border-top: none;
+        border-radius: 0 0 var(--radius-lg) var(--radius-lg);
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+        position: relative;
+        z-index: 1;
+        box-shadow: var(--shadow-lg);
+        width: 100%;
+      }
 
-        .time-elapsed {
-            color: var(--primary);
-        }
+      /* ── Seekbar + Timers ── */
+      .seek-section {
+        display: none;
+        flex-direction: column;
+        gap: 8px;
+        width: 100%;
+      }
 
-        .time-countdown {
-            color: var(--text-muted);
-            transition: color .3s;
-        }
+      .time-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0 4px;
+      }
 
-        .time-countdown.urgent {
-            color: #ef4444;
-        }
+      .time-elapsed,
+      .time-countdown {
+        font-size: clamp(0.75rem, 2vw, 0.85rem);
+        font-weight: 700;
+        font-variant-numeric: tabular-nums;
+        letter-spacing: 0.5px;
+      }
 
-        .seek-track-wrap {
-            position: relative;
-            width: 100%;
-            height: 24px;
-            display: flex;
-            align-items: center;
-            cursor: pointer;
-            touch-action: none;
-        }
+      .time-elapsed {
+        color: var(--primary);
+      }
 
-        .seek-track {
-            position: absolute;
-            left: 0;
-            right: 0;
-            height: 6px;
-            background: var(--bg-secondary);
-            border-radius: 6px;
-            border: 1px solid var(--border);
-            overflow: hidden;
-            transition: height .2s ease;
-        }
+      .time-countdown {
+        color: var(--text-muted);
+        transition: color 0.3s;
+      }
 
-        .seek-track-wrap:hover .seek-track, .seek-track-wrap.dragging .seek-track {
-            height: 10px;
-        }
+      .time-countdown.urgent {
+        color: #ef4444;
+      }
 
-        .seek-fill {
-            height: 100%;
-            background: var(--gradient-primary);
-            width: 0%;
-            pointer-events: none;
-            box-shadow: 2px 0 10px rgba(249, 115, 22, .5);
-        }
+      .seek-track-wrap {
+        position: relative;
+        width: 100%;
+        height: 24px;
+        display: flex;
+        align-items: center;
+        cursor: pointer;
+        touch-action: none;
+      }
 
-        .seek-thumb {
-            position: absolute;
-            top: 50%;
-            left: 0%;
-            transform: translate(-50%, -50%);
-            width: 16px;
-            height: 16px;
-            background: #fff;
-            border-radius: 50%;
-            box-shadow: 0 0 0 4px rgba(249, 115, 22, .75);
-            pointer-events: none;
-            opacity: 0;
-            transition: opacity .2s;
-        }
+      .seek-track {
+        position: absolute;
+        left: 0;
+        right: 0;
+        height: 6px;
+        background: var(--surface-solid);
+        border-radius: 6px;
+        border: 1px solid var(--border);
+        overflow: hidden;
+        transition: height 0.2s ease;
+      }
 
-        .seek-track-wrap:hover .seek-thumb, .seek-track-wrap.dragging .seek-thumb {
-            opacity: 1;
-        }
+      .seek-track-wrap:hover .seek-track,
+      .seek-track-wrap.dragging .seek-track {
+        height: 10px;
+      }
 
-        .seek-preview {
-            position: absolute;
-            bottom: calc(100% + 12px);
-            left: 0%;
-            transform: translateX(-50%);
-            background: rgba(0, 0, 0, .9);
-            color: #fff;
-            font-size: .8rem;
-            font-weight: 700;
-            padding: 4px 10px;
-            border-radius: 6px;
-            white-space: nowrap;
-            pointer-events: none;
-            opacity: 0;
-            transition: opacity .1s;
-            border: 1px solid rgba(255, 255, 255, .15);
-            backdrop-filter: blur(8px);
-            z-index: 10;
-        }
+      .seek-fill {
+        height: 100%;
+        background: var(--gradient-primary);
+        width: 0%;
+        pointer-events: none;
+        box-shadow: 2px 0 10px rgba(249, 115, 22, 0.5);
+      }
 
-        .seek-track-wrap:hover .seek-preview {
-            opacity: 1;
-        }
+      .seek-thumb {
+        position: absolute;
+        top: 50%;
+        left: 0%;
+        transform: translate(-50%, -50%);
+        width: 16px;
+        height: 16px;
+        background: #fff;
+        border-radius: 50%;
+        box-shadow: 0 0 0 4px rgba(249, 115, 22, 0.75);
+        pointer-events: none;
+        opacity: 0;
+        transition:
+          opacity 0.2s,
+          transform 0.2s;
+      }
 
-        /* ── Controls Grid System ── */
+      .seek-track-wrap:hover .seek-thumb,
+      .seek-track-wrap.dragging .seek-thumb {
+        opacity: 1;
+        transform: translate(-50%, -50%) scale(1.2);
+      }
+
+      .seek-preview {
+        position: absolute;
+        bottom: calc(100% + 12px);
+        left: 0%;
+        transform: translateX(-50%);
+        background: rgba(0, 0, 0, 0.9);
+        color: #fff;
+        font-size: 0.8rem;
+        font-weight: 700;
+        padding: 4px 10px;
+        border-radius: 6px;
+        white-space: nowrap;
+        pointer-events: none;
+        opacity: 0;
+        transition: opacity 0.1s;
+        border: 1px solid rgba(255, 255, 255, 0.15);
+        backdrop-filter: blur(8px);
+        z-index: 10;
+      }
+
+      .seek-track-wrap:hover .seek-preview {
+        opacity: 1;
+      }
+
+      /* ── Controls Grid System ── */
+      .controls-row {
+        display: flex;
+        width: 100%;
+        gap: 12px;
+        align-items: center;
+        justify-content: space-between;
+        flex-wrap: nowrap;
+      }
+
+      .control-group {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        background: var(--surface-solid);
+        padding: 6px 12px;
+        border-radius: 12px;
+        border: 1px solid var(--border);
+      }
+
+      .btn-player {
+        padding: 8px;
+        background: transparent;
+        border: 1px solid transparent;
+        border-radius: 8px;
+        cursor: pointer;
+        color: var(--text-main);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.2s ease;
+        min-width: 38px;
+        min-height: 38px;
+      }
+
+      .btn-player:hover {
+        background: var(--surface-hover);
+        color: var(--primary);
+        transform: translateY(-2px);
+      }
+
+      .btn-player.active {
+        background: var(--gradient-primary);
+        color: #fff;
+        box-shadow: var(--shadow-glow);
+      }
+
+      .btn-player.active:hover {
+        transform: translateY(-2px) scale(1.05);
+        color: #fff;
+      }
+
+      .btn-player .lucide {
+        width: 20px;
+        height: 20px;
+      }
+
+      .playlist-info {
+        background: var(--surface-solid);
+        padding: 8px 16px;
+        border-radius: 12px;
+        font-size: 0.85rem;
+        color: var(--text-muted);
+        border: 1px solid var(--border);
+        font-weight: 600;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        text-align: center;
+        flex: 1;
+        max-width: 280px;
+      }
+
+      .control-group select {
+        background: transparent;
+        border: none;
+        color: var(--text-main);
+        outline: none;
+        font-size: 0.9rem;
+        font-weight: 700;
+        cursor: pointer;
+        padding: 0 4px;
+      }
+
+      .control-group select option {
+        background: var(--surface-solid);
+        color: var(--text-main);
+      }
+
+      /* ── Custom Unified Sliders (Volume & Boost) ── */
+      .mini-slider-wrap {
+        width: clamp(60px, 8vw, 90px);
+        height: 24px;
+        display: flex;
+        align-items: center;
+        position: relative;
+        cursor: pointer;
+        touch-action: none;
+      }
+
+      .mini-slider-track {
+        width: 100%;
+        height: 6px;
+        background: var(--bg-secondary);
+        border-radius: 4px;
+        border: 1px solid var(--border);
+        position: relative;
+        transition: height 0.2s;
+        overflow: visible;
+      }
+
+      .mini-slider-wrap:hover .mini-slider-track,
+      .mini-slider-wrap.dragging .mini-slider-track {
+        height: 9px;
+      }
+
+      .mini-slider-fill {
+        height: 100%;
+        border-radius: 4px;
+        pointer-events: none;
+        width: 0%;
+        position: relative;
+      }
+
+      .mini-slider-thumb {
+        position: absolute;
+        right: -6px;
+        top: 50%;
+        transform: translateY(-50%);
+        width: 12px;
+        height: 12px;
+        background: #fff;
+        border-radius: 50%;
+        opacity: 0;
+        transition:
+          opacity 0.2s,
+          transform 0.2s;
+        pointer-events: none;
+      }
+
+      .mini-slider-wrap:hover .mini-slider-thumb,
+      .mini-slider-wrap.dragging .mini-slider-thumb {
+        opacity: 1;
+        transform: translateY(-50%) scale(1.2);
+      }
+
+      .vol-fill {
+        background: var(--gradient-primary);
+      }
+
+      .vol-fill .mini-slider-thumb {
+        box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.6);
+      }
+
+      .boost-fill {
+        background: #ef4444;
+      }
+
+      .boost-fill .mini-slider-thumb {
+        box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.6);
+      }
+
+      .divider {
+        width: 1px;
+        height: 20px;
+        background: var(--border);
+        margin: 0 4px;
+      }
+
+      /* ── OSD Toast ── */
+      #osd {
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%) scale(0.85);
+        background: rgba(0, 0, 0, 0.85);
+        color: #fff;
+        padding: 14px 28px;
+        border-radius: 16px;
+        font-size: clamp(1.1rem, 3vw, 1.3rem);
+        font-weight: 700;
+        pointer-events: none;
+        opacity: 0;
+        transition:
+          opacity 0.2s,
+          transform 0.2s;
+        z-index: 9999;
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.15);
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+
+      #osd.show {
+        opacity: 1;
+        transform: translate(-50%, -50%) scale(1);
+      }
+
+      /* ── Media Info Dashboard ── */
+      .media-info {
+        margin-top: 16px;
+        opacity: 0;
+        animation: slideUp 0.5s var(--animation-timing) 0.2s forwards;
+        width: 100%;
+      }
+
+      .stats-dashboard {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 16px;
+        margin-bottom: 24px;
+      }
+
+      .stat-card {
+        background: var(--surface);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        padding: 16px;
+        border-radius: var(--radius-lg);
+        border: 1px solid var(--border);
+        transition:
+          transform 0.3s,
+          box-shadow 0.3s,
+          border-color 0.3s;
+        box-shadow: var(--shadow-sm);
+      }
+
+      .stat-card:hover {
+        transform: translateY(-4px);
+        box-shadow: var(--shadow-glow);
+        border-color: var(--primary);
+      }
+
+      .stat-label {
+        font-size: 0.8rem;
+        color: var(--text-muted);
+        margin-bottom: 6px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+
+      .stat-value {
+        font-size: 1.05rem;
+        font-weight: 700;
+        color: var(--text-main);
+        word-break: break-all;
+      }
+
+      .download-link {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        padding: 14px 28px;
+        background: var(--gradient-primary);
+        color: #fff;
+        text-decoration: none;
+        border-radius: 12px;
+        font-weight: 700;
+        font-size: 1rem;
+        box-shadow: var(--shadow-glow);
+        transition: all 0.3s ease;
+        border: none;
+      }
+
+      .download-link:hover {
+        transform: translateY(-3px) scale(1.02);
+        box-shadow: 0 10px 25px rgba(249, 115, 22, 0.4);
+      }
+
+      .playlist-stats {
+        font-size: 0.75rem;
+        color: var(--text-muted);
+        margin-top: 4px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 4px;
+      }
+
+      .playlist-header-row {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+      }
+
+      /* ════════════════════════════════
+            RESPONSIVE BREAKPOINTS
+        ════════════════════════════════ */
+      @media (max-width: 992px) {
         .controls-row {
-            display: flex;
-            width: 100%;
-            gap: 12px;
-            align-items: center;
-            justify-content: space-between;
-            flex-wrap: nowrap;
-        }
-
-        .control-group {
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            background: var(--bg-secondary);
-            padding: 6px 10px;
-            border-radius: 12px;
-            border: 1px solid var(--border);
-        }
-
-        .btn-player {
-            padding: 8px;
-            background: transparent;
-            border: 1px solid transparent;
-            border-radius: 8px;
-            cursor: pointer;
-            color: var(--text-main);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: all .2s ease;
-            min-width: 38px;
-            min-height: 38px;
-        }
-
-        .btn-player:hover {
-            background: var(--surface-hover);
-            transform: scale(1.08);
-        }
-
-        .btn-player.active {
-            background: var(--gradient-primary);
-            color: #fff;
-            box-shadow: var(--shadow-glow);
-        }
-
-        .btn-player.active:hover {
-            transform: scale(1.05);
-        }
-
-        .btn-player .lucide {
-            width: 20px;
-            height: 20px;
+          flex-wrap: wrap;
+          justify-content: center;
         }
 
         .playlist-info {
-            background: var(--bg-secondary);
-            padding: 8px 16px;
-            border-radius: 12px;
-            font-size: .85rem;
-            color: var(--text-muted);
-            border: 1px solid var(--border);
-            font-weight: 600;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            text-align: center;
-            flex: 1;
-            max-width: 250px;
+          max-width: 100%;
+          order: -1;
+          margin-bottom: 4px;
+        }
+      }
+
+      @media (max-width: 640px) {
+        .controls-row {
+          flex-direction: column;
+          align-items: stretch;
+          gap: 12px;
+        }
+
+        .control-group {
+          justify-content: space-between;
+          flex: 1;
+          width: 100%;
+          padding: 8px 10px;
+          flex-wrap: wrap;
+        }
+
+        #audioToolsGroup {
+          flex-wrap: wrap;
+          justify-content: center;
+          gap: 8px;
+        }
+
+        .mini-slider-wrap {
+          width: 65px;
         }
 
         .control-group select {
-            background: transparent;
-            border: none;
-            color: var(--text-main);
-            outline: none;
-            font-size: .9rem;
-            font-weight: 700;
-            cursor: pointer;
-            padding: 0 4px;
-        }
-
-        .control-group select option {
-            background: var(--surface);
-            color: var(--text-main);
-        }
-
-        /* ── Custom Unified Sliders (Volume & Boost) ── */
-        .mini-slider-wrap {
-            width: clamp(60px, 8vw, 90px);
-            height: 24px;
-            display: flex;
-            align-items: center;
-            position: relative;
-            cursor: pointer;
-            touch-action: none;
-        }
-
-        .mini-slider-track {
-            width: 100%;
-            height: 6px;
-            background: var(--bg-main);
-            border-radius: 4px;
-            border: 1px solid var(--border);
-            position: relative;
-            transition: height 0.2s;
-            overflow: visible;
-        }
-
-        .mini-slider-wrap:hover .mini-slider-track, .mini-slider-wrap.dragging .mini-slider-track {
-            height: 9px;
-        }
-
-        .mini-slider-fill {
-            height: 100%;
-            border-radius: 4px;
-            pointer-events: none;
-            width: 0%;
-            position: relative;
-        }
-
-        .mini-slider-thumb {
-            position: absolute;
-            right: -6px;
-            top: 50%;
-            transform: translateY(-50%);
-            width: 12px;
-            height: 12px;
-            background: #fff;
-            border-radius: 50%;
-            opacity: 0;
-            transition: opacity 0.2s;
-            pointer-events: none;
-        }
-
-        .mini-slider-wrap:hover .mini-slider-thumb, .mini-slider-wrap.dragging .mini-slider-thumb {
-            opacity: 1;
-        }
-
-        .vol-fill {
-            background: var(--gradient-primary);
-        }
-
-        .vol-fill .mini-slider-thumb {
-            box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.6);
-        }
-
-        .boost-fill {
-            background: #ef4444;
-        }
-
-        /* Red accent for boost */
-        .boost-fill .mini-slider-thumb {
-            box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.6);
+          max-width: 50px;
+          font-size: 0.8rem;
         }
 
         .divider {
-            width: 1px;
-            height: 20px;
-            background: var(--border);
-            margin: 0 4px;
+          margin: 0 4px;
         }
 
-        /* ── OSD Toast ── */
-        #osd {
-            position: fixed;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%) scale(.85);
-            background: rgba(0, 0, 0, .85);
-            color: #fff;
-            padding: 14px 28px;
-            border-radius: 16px;
-            font-size: clamp(1.1rem, 3vw, 1.3rem);
-            font-weight: 700;
-            pointer-events: none;
-            opacity: 0;
-            transition: opacity .2s, transform .2s;
-            z-index: 9999;
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, .15);
-            display: flex;
-            align-items: center;
-            gap: 12px;
+        #boostValue {
+          display: none;
         }
 
-        #osd.show {
-            opacity: 1;
-            transform: translate(-50%, -50%) scale(1);
+        .btn-player {
+          min-width: 44px;
+          min-height: 44px;
+          padding: 8px;
         }
 
-        /* ── Media Info Dashboard ── */
-        .media-info {
-            margin-top: 16px;
-            opacity: 0;
-            animation: slideUp .5s var(--animation-timing) .2s forwards;
-            width: 100%;
+        .btn-player .lucide {
+          width: 22px;
+          height: 22px;
         }
 
-        .stats-dashboard {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 16px;
-            margin-bottom: 24px;
+        .seek-thumb {
+          opacity: 1;
         }
 
-        .stat-card {
-            background: var(--surface);
-            padding: 16px;
-            border-radius: var(--radius-lg);
-            border: 1px solid var(--border);
-            transition: transform .3s, box-shadow .3s;
-            box-shadow: var(--shadow-sm);
+        .seek-track {
+          height: 8px;
         }
 
-        .stat-card:hover {
-            transform: translateY(-4px);
-            box-shadow: var(--shadow-lg);
-            border-color: var(--primary);
+        .player-container {
+          width: 100%;
         }
 
-        .stat-label {
-            font-size: .8rem;
-            color: var(--text-muted);
-            margin-bottom: 6px;
-            font-weight: 700;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            display: flex;
-            align-items: center;
-            gap: 6px;
+        .header-actions {
+          flex-wrap: wrap;
+          justify-content: flex-end;
         }
-
-        .stat-value {
-            font-size: 1.05rem;
-            font-weight: 700;
-            color: var(--text-main);
-            word-break: break-all;
-        }
-
-        .download-link {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
-            padding: 14px 28px;
-            background: var(--gradient-primary);
-            color: #fff;
-            text-decoration: none;
-            border-radius: 12px;
-            font-weight: 700;
-            font-size: 1rem;
-            box-shadow: var(--shadow-glow);
-            transition: all .3s ease;
-            border: none;
-        }
-
-        .download-link:hover {
-            transform: translateY(-3px) scale(1.02);
-            box-shadow: 0 10px 25px rgba(249, 115, 22, .4);
-        }
-
-        /* ════════════════════════════════
-           RESPONSIVE BREAKPOINTS
-        ════════════════════════════════ */
-        @media (max-width: 992px) {
-            .controls-row {
-                flex-wrap: wrap;
-                justify-content: center;
-            }
-
-            .playlist-info {
-                max-width: 100%;
-                order: -1;
-                margin-bottom: 4px;
-            }
-        }
-
-        @media (max-width: 640px) {
-            .controls-row {
-                flex-direction: column;
-                align-items: stretch;
-                gap: 10px;
-            }
-
-            .control-group {
-                justify-content: space-between;
-                flex: 1;
-                width: 100%;
-                padding: 6px;
-            }
-
-            /* Compact Audio Tools Group */
-            #audioToolsGroup {
-                flex-wrap: wrap;
-                justify-content: center;
-                gap: 6px;
-            }
-
-            .mini-slider-wrap {
-                width: 65px;
-            }
-
-            /* Shrink sliders slightly */
-            .control-group select {
-                max-width: 50px;
-                font-size: 0.8rem;
-            }
-
-            .divider {
-                margin: 0 2px;
-            }
-
-            #boostValue {
-                display: none;
-            }
-
-            /* Hide number text to save space */
-            .btn-player {
-                min-width: 40px;
-                min-height: 40px;
-                padding: 8px;
-            }
-
-            .btn-player .lucide {
-                width: 22px;
-                height: 22px;
-            }
-
-            .seek-thumb {
-                opacity: 1;
-            }
-
-            .seek-track {
-                height: 8px;
-            }
-
-            .player-container {
-                width: 100%;
-            }
-
-            .header-actions {
-                flex-wrap: wrap;
-                justify-content: flex-end;
-            }
-        }
+      }
     </style>
-</head>
-<body>
-<div class="container">
-    <div class="header">
+  </head>
+
+  <body>
+    <div class="container">
+      <div class="header">
         <h1><i data-lucide="play-circle"></i> Media Player</h1>
         <div class="header-actions">
-            <button class="btn-base icon-only-btn" id="themeToggleBtn" onclick="toggleTheme()" title="Toggle Theme">
-                <i data-lucide="sun"></i>
-            </button>
-            <a href="index.html" class="btn-base"><i data-lucide="arrow-left"></i> Back to Files</a>
+          <button
+            class="btn-base icon-only-btn"
+            id="themeToggleBtn"
+            onclick="toggleTheme()"
+            title="Toggle Theme"
+          >
+            <i data-lucide="sun"></i>
+          </button>
+          <a href="index.html" class="btn-base"
+            ><i data-lucide="arrow-left"></i> Back to Files</a
+          >
         </div>
-    </div>
+      </div>
 
-    <div class="player-container" id="playerContainer" data-type="video">
+      <div class="player-container" id="playerContainer" data-type="video">
         <canvas id="ambientCanvas" width="64" height="36"></canvas>
 
         <div class="player-wrapper" id="playerWrapper">
-            <div style="padding:50px;text-align:center;color:var(--text-muted);">
-                <i data-lucide="loader-2" class="spinner"
-                   style="width:44px;height:44px;color:var(--primary);display:block;margin:0 auto 14px;"></i>
-                <p>Loading media…</p>
-            </div>
+          <div
+            style="padding: 50px; text-align: center; color: var(--text-muted)"
+          >
+            <i
+              data-lucide="loader-2"
+              class="spinner"
+              style="
+                width: 44px;
+                height: 44px;
+                color: var(--primary);
+                display: block;
+                margin: 0 auto 14px;
+              "
+            ></i>
+            <p>Loading media…</p>
+          </div>
         </div>
 
-        <div class="player-controls" id="playerControls" style="display:none;">
+        <div class="player-controls" id="playerControls" style="display: none">
+          <div class="seek-section" id="seekSection">
+            <div class="time-row">
+              <span class="time-elapsed" id="timeElapsed">0:00</span>
+              <span class="time-countdown" id="timeCountdown">-0:00</span>
+            </div>
+            <div class="seek-track-wrap" id="seekTrackWrap">
+              <div class="seek-track" id="seekTrack">
+                <div class="seek-fill" id="seekFill"></div>
+              </div>
+              <div class="seek-thumb" id="seekThumb"></div>
+              <div class="seek-preview" id="seekPreview">0:00</div>
+            </div>
+          </div>
 
-            <div class="seek-section" id="seekSection">
-                <div class="time-row">
-                    <span class="time-elapsed" id="timeElapsed">0:00</span>
-                    <span class="time-countdown" id="timeCountdown">-0:00</span>
-                </div>
-                <div class="seek-track-wrap" id="seekTrackWrap">
-                    <div class="seek-track" id="seekTrack">
-                        <div class="seek-fill" id="seekFill"></div>
-                    </div>
-                    <div class="seek-thumb" id="seekThumb"></div>
-                    <div class="seek-preview" id="seekPreview">0:00</div>
-                </div>
+          <div class="controls-row">
+            <div class="control-group">
+              <button
+                class="btn-player active"
+                id="ambientBtn"
+                onclick="toggleAmbientMode()"
+                title="Ambient (A)"
+              >
+                <i data-lucide="sun-dim"></i>
+              </button>
+              <button
+                class="btn-player"
+                id="shuffleBtn"
+                onclick="toggleShuffle()"
+                title="Shuffle (S)"
+              >
+                <i data-lucide="shuffle"></i>
+              </button>
+              <button
+                class="btn-player"
+                onclick="playPrev()"
+                title="Prev (Shift+P)"
+              >
+                <i data-lucide="skip-back"></i>
+              </button>
+              <button
+                class="btn-player"
+                id="playPauseBtn"
+                onclick="togglePlayPause()"
+                title="Play/Pause (K / Space)"
+              >
+                <i data-lucide="play"></i>
+              </button>
+              <button
+                class="btn-player"
+                onclick="playNext()"
+                title="Next (Shift+N)"
+              >
+                <i data-lucide="skip-forward"></i>
+              </button>
             </div>
 
-            <div class="controls-row">
-
-                <div class="control-group">
-                    <button class="btn-player active" id="ambientBtn" onclick="toggleAmbientMode()" title="Ambient (A)">
-                        <i data-lucide="sun-dim"></i>
-                    </button>
-                    <button class="btn-player" id="shuffleBtn" onclick="toggleShuffle()" title="Shuffle (S)">
-                        <i data-lucide="shuffle"></i>
-                    </button>
-                    <button class="btn-player" onclick="playPrev()" title="Prev (Shift+P)">
-                        <i data-lucide="skip-back"></i>
-                    </button>
-                    <button class="btn-player" id="playPauseBtn" onclick="togglePlayPause()"
-                            title="Play/Pause (K / Space)">
-                        <i data-lucide="play"></i>
-                    </button>
-                    <button class="btn-player" onclick="playNext()" title="Next (Shift+N)">
-                        <i data-lucide="skip-forward"></i>
-                    </button>
-                </div>
-
-                <div class="playlist-info" id="playlistInfo">Loading…</div>
-
-                <div class="control-group" id="audioToolsGroup">
-                    <i data-lucide="gauge" style="width:16px;height:16px;color:var(--text-muted);flex-shrink:0;"></i>
-                    <select id="speedSelect" onchange="setPlaybackSpeed(this.value)" title="Speed (Shift+> / Shift+<)">
-                        <option value="0.5">0.5×</option>
-                        <option value="0.75">0.75×</option>
-                        <option value="1" selected>1×</option>
-                        <option value="1.25">1.25×</option>
-                        <option value="1.5">1.5×</option>
-                        <option value="2">2×</option>
-                    </select>
-                    <div class="divider"></div>
-
-                    <button class="btn-player" id="muteBtn" onclick="toggleMute()" title="Mute (M)"
-                            style="padding:4px; min-width:30px; min-height:30px;">
-                        <i data-lucide="volume-2"></i>
-                    </button>
-
-                    <div class="mini-slider-wrap" id="volumeWrap" title="Volume">
-                        <div class="mini-slider-track">
-                            <div class="mini-slider-fill vol-fill" id="volumeFill">
-                                <div class="mini-slider-thumb"></div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="divider"></div>
-                    <i data-lucide="speaker" style="width:16px;height:16px;color:var(--text-muted);flex-shrink:0;"></i>
-
-                    <div class="mini-slider-wrap" id="boostWrap" title="Audio Boost">
-                        <div class="mini-slider-track">
-                            <div class="mini-slider-fill boost-fill" id="boostFill">
-                                <div class="mini-slider-thumb"></div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <span id="boostValue"
-                          style="font-size:.8rem;font-weight:700;width:24px;color:var(--text-main);flex-shrink:0;text-align:center;">1×</span>
-                </div>
-
-                <div class="control-group">
-                    <button class="btn-player" id="pipBtn" onclick="togglePiP()" title="Picture-in-Picture (I)">
-                        <i data-lucide="picture-in-picture-2"></i>
-                    </button>
-                    <button class="btn-player" onclick="toggleFullscreen()" title="Fullscreen (F)">
-                        <i data-lucide="maximize"></i>
-                    </button>
-                </div>
+            <div class="playlist-info" id="playlistInfo">
+              <div>Loading…</div>
+              <div class="playlist-stats" id="playlistStats"></div>
             </div>
+
+            <div class="control-group" id="audioToolsGroup">
+              <i
+                data-lucide="gauge"
+                style="
+                  width: 16px;
+                  height: 16px;
+                  color: var(--text-muted);
+                  flex-shrink: 0;
+                "
+              ></i>
+              <select
+                id="speedSelect"
+                onchange="setPlaybackSpeed(this.value)"
+                title="Speed (Shift+> / Shift+<)"
+              >
+                <option value="0.5">0.5×</option>
+                <option value="0.75">0.75×</option>
+                <option value="1" selected>1×</option>
+                <option value="1.25">1.25×</option>
+                <option value="1.5">1.5×</option>
+                <option value="2">2×</option>
+              </select>
+              <div class="divider"></div>
+              <button
+                class="btn-player"
+                id="muteBtn"
+                onclick="toggleMute()"
+                title="Mute (M)"
+                style="padding: 4px; min-width: 30px; min-height: 30px"
+              >
+                <i data-lucide="volume-2"></i>
+              </button>
+              <div class="mini-slider-wrap" id="volumeWrap" title="Volume">
+                <div class="mini-slider-track">
+                  <div class="mini-slider-fill vol-fill" id="volumeFill">
+                    <div class="mini-slider-thumb"></div>
+                  </div>
+                </div>
+              </div>
+              <div class="divider"></div>
+              <i
+                data-lucide="speaker"
+                style="
+                  width: 16px;
+                  height: 16px;
+                  color: var(--text-muted);
+                  flex-shrink: 0;
+                "
+              ></i>
+              <div class="mini-slider-wrap" id="boostWrap" title="Audio Boost">
+                <div class="mini-slider-track">
+                  <div class="mini-slider-fill boost-fill" id="boostFill">
+                    <div class="mini-slider-thumb"></div>
+                  </div>
+                </div>
+              </div>
+              <span
+                id="boostValue"
+                style="
+                  font-size: 0.8rem;
+                  font-weight: 700;
+                  width: 24px;
+                  color: var(--text-main);
+                  flex-shrink: 0;
+                  text-align: center;
+                "
+                >1×</span
+              >
+            </div>
+
+            <div class="control-group">
+              <button
+                class="btn-player"
+                id="pipBtn"
+                onclick="togglePiP()"
+                title="Picture-in-Picture (I)"
+              >
+                <i data-lucide="picture-in-picture-2"></i>
+              </button>
+              <button
+                class="btn-player"
+                onclick="toggleFullscreen()"
+                title="Fullscreen (F)"
+              >
+                <i data-lucide="maximize"></i>
+              </button>
+            </div>
+          </div>
         </div>
+      </div>
+      <div class="media-info" id="mediaInfo"></div>
     </div>
-    <div class="media-info" id="mediaInfo"></div>
-</div>
 
-<div id="osd"></div>
+    <div id="osd"></div>
 
-<script>
-    // --- Safe Theme Init ---
-    if (localStorage.getItem('theme') === 'light') {
-        document.body.classList.add('light-theme');
-        const themeBtn = document.getElementById('themeToggleBtn');
+    <script>
+      // --- Safe Theme Init ---
+      if (localStorage.getItem("theme") === "light") {
+        document.body.classList.add("light-theme");
+        const themeBtn = document.getElementById("themeToggleBtn");
         if (themeBtn) themeBtn.innerHTML = '<i data-lucide="moon"></i>';
-    }
+      }
 
-    function toggleTheme() {
-        const isLight = document.body.classList.toggle('light-theme');
-        localStorage.setItem('theme', isLight ? 'light' : 'dark');
-        const btn = document.getElementById('themeToggleBtn');
+      function toggleTheme() {
+        const isLight = document.body.classList.toggle("light-theme");
+        localStorage.setItem("theme", isLight ? "light" : "dark");
+        const btn = document.getElementById("themeToggleBtn");
         if (btn) {
-            // Fix: Safely replace innerHTML rather than querying for the <i> tag
-            btn.innerHTML = `<i data-lucide="${isLight ? 'moon' : 'sun'}"></i>`;
-            lucide.createIcons({nodes: [btn]});
+          btn.innerHTML = `<i data-lucide="${isLight ? "moon" : "sun"}"></i>`;
+          lucide.createIcons({ nodes: [btn] });
         }
-    }
+      }
 
-    lucide.createIcons();
+      lucide.createIcons();
 
-    /* ─── State ─── */
-    let filePath = '', baseUrl = '', fileName = '', fileTypeStr = '', currentFolder = '';
-    let fileSize = 0, mediaElement = null, audioContext = null, gainNode = null;
-    let isPlaying = false, isMuted = false, volume = 1.0, audioBoost = 1.0;
-    let playlist = [], currentIndex = -1, isShuffle = false;
-    let isAmbientMode = true, ambientRafId = null;
-    const SPEEDS = [0.5, 0.75, 1, 1.25, 1.5, 2];
+      /* ─── State ─── */
+      let filePath = "",
+        baseUrl = "",
+        fileName = "",
+        fileTypeStr = "",
+        currentFolder = "";
+      let fileSize = 0,
+        mediaElement = null;
+      let isPlaying = false,
+        isMuted = false,
+        volume = 1.0,
+        audioBoost = 1.0;
+      let playlist = [],
+        currentIndex = -1,
+        isShuffle = false;
+      let isAmbientMode = true,
+        ambientRafId = null;
 
-    /* ─── OSD ─── */
-    let osdTimer = null;
+      // Audio Visualizer Variables
+      let audioContext = null,
+        gainNode = null,
+        analyserNode = null;
+      let visualizerRafId = null;
 
-    function showOSD(icon, text) {
-        const el = document.getElementById('osd');
+      const SPEEDS = [0.5, 0.75, 1, 1.25, 1.5, 2];
+      let osdTimer = null;
+
+      function showOSD(icon, text) {
+        const el = document.getElementById("osd");
         el.innerHTML = `<i data-lucide="${icon}" style="width:22px;height:22px;flex-shrink:0;"></i><span>${text}</span>`;
-        lucide.createIcons({nodes: [el]});
-        el.classList.add('show');
+        lucide.createIcons({ nodes: [el] });
+        el.classList.add("show");
         clearTimeout(osdTimer);
-        osdTimer = setTimeout(() => el.classList.remove('show'), 1300);
-    }
+        osdTimer = setTimeout(() => el.classList.remove("show"), 1300);
+      }
 
-    /* ─── URL Params ─── */
-    function parseURLParams() {
+      function parseURLParams() {
         const p = new URLSearchParams(window.location.search);
-        filePath = p.get('file') || '';
-        baseUrl = p.get('baseUrl') || '';
-        fileTypeStr = p.get('type') || '';
-        fileName = p.get('name') || filePath?.split('/').pop() || 'Unknown';
-        fileSize = p.get('size') || 0;
-        currentFolder = p.get('currentFolder') || '';
-    }
+        const rawFilePath = p.get("path") || p.get("file") || "";
+        filePath = normalizePath(rawFilePath);
+        baseUrl = p.get("baseUrl") || "";
+        fileTypeStr = p.get("type") || "";
+        fileName = p.get("name") || filePath?.split("/").pop() || "Unknown";
+        fileSize = parseInt(p.get("size")) || 0;
+        currentFolder = normalizePath(p.get("currentFolder") || "");
+      }
 
-    /* ─── Init ─── */
-    async function initPlayer() {
+      async function initPlayer() {
         parseURLParams();
         if (!filePath || !baseUrl) {
-            showError('No file or Base URL specified.');
-            return;
+          showError("No file or Base URL specified.");
+          return;
         }
         await fetchPlaylist();
         renderMediaUI();
-        setupMiniSliders(); // Initialize the custom drag sliders safely
-    }
+        setupMiniSliders();
+      }
 
-    async function fetchPlaylist() {
+      async function fetchPlaylist() {
         try {
+          const folderContentsRes = await fetch(
+            `${baseUrl}/api/folders/contents?path=${encodeURIComponent(currentFolder)}`,
+          );
+          let allItems = [];
+
+          if (folderContentsRes.ok) {
+            const folderData = await folderContentsRes.json();
+            const folders = folderData.folders.map((f) => ({
+              ...f,
+              isDirectory: true,
+              type: "folder",
+            }));
+            allItems = [...folders, ...folderData.files];
+          } else {
             const res = await fetch(`${baseUrl}/api/media`);
             if (!res.ok) return;
             let files = await res.json();
-            if (currentFolder) files = files.filter(f => f.filename.startsWith(currentFolder) || f.filename === filePath);
-            files.sort((a, b) => a.filename.localeCompare(b.filename));
-            playlist = files.filter(f => ['video', 'audio', 'image', 'pdf'].includes(getFileType(f.filename, f.contentType || '')));
-            currentIndex = playlist.findIndex(f => f.filename === filePath);
-            updatePlaylistInfo();
+            if (currentFolder) {
+              files = files.filter((f) => {
+                const filePathNorm = normalizePath(f.path || f.filename);
+                return filePathNorm.startsWith(currentFolder);
+              });
+            }
+            allItems = files;
+          }
+
+          allItems.sort((a, b) => {
+            if (a.isDirectory && !b.isDirectory) return -1;
+            if (!a.isDirectory && b.isDirectory) return 1;
+            return (a.name || a.filename).localeCompare(b.name || b.filename);
+          });
+
+          playlist = allItems.map((item) => ({
+            ...item,
+            path: item.path || item.filename,
+            name: item.name || item.filename,
+            isDirectory: item.isDirectory || false,
+            contentType:
+              item.contentType ||
+              (item.isDirectory
+                ? "application/x-directory"
+                : "application/octet-stream"),
+          }));
+
+          currentIndex = playlist.findIndex(
+            (item) => normalizePath(item.path) === filePath,
+          );
+          if (currentIndex === -1 && playlist.length > 0) {
+            currentIndex = playlist.findIndex((item) => {
+              return item.name.split("/").pop() === filePath.split("/").pop();
+            });
+          }
+          if (currentIndex === -1 && playlist.length > 0) currentIndex = 0;
+
+          updatePlaylistInfo();
         } catch (e) {
-            console.error('Playlist:', e);
+          console.error("Playlist error:", e);
+          playlist = [];
+          currentIndex = -1;
         }
-    }
+      }
 
-    function updatePlaylistInfo() {
-        const info = document.getElementById('playlistInfo');
-        if (info) info.innerHTML = playlist.length > 1 ? `${currentIndex + 1}/${playlist.length} ${isShuffle ? '🔀' : '▶'}` : `1 item`;
-    }
+      function updatePlaylistInfo() {
+        const info = document.getElementById("playlistInfo");
+        if (info) {
+          const playIcon =
+            '<i data-lucide="play" style="width:14px;height:14px;vertical-align:middle;margin-left:4px;"></i>';
+          const shuffleIcon =
+            '<i data-lucide="shuffle" style="width:14px;height:14px;vertical-align:middle;margin-left:4px;"></i>';
+          const folderIcon =
+            '<i data-lucide="folder" style="width:12px;height:12px;vertical-align:middle;margin-right:4px;"></i>';
+          const safeFolderName = currentFolder
+            ? escapeHtml(currentFolder.split("/").pop())
+            : "All Files";
 
-    function getFileType(filename, contentType) {
-        const ext = filename?.split('.').pop().toLowerCase() || '';
-        if ((contentType && contentType.startsWith('video/')) || ['mp4', 'mkv', 'avi', 'mov', 'webm'].includes(ext)) return 'video';
-        if ((contentType && contentType.startsWith('audio/')) || ['mp3', 'wav', 'flac', 'aac', 'ogg'].includes(ext)) return 'audio';
-        if ((contentType && contentType.startsWith('image/')) || ['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(ext)) return 'image';
-        if (contentType === 'application/pdf' || ext === 'pdf') return 'pdf';
-        if (['js', 'html', 'css', 'json', 'xml', 'py', 'java', 'txt', 'md'].includes(ext)) return 'code';
-        return 'other';
-    }
+          if (playlist.length > 0) {
+            info.innerHTML = `
+                <div class="playlist-header-row">
+                    ${currentIndex >= 0 ? currentIndex + 1 : 0}/${playlist.length} 
+                    ${isShuffle ? shuffleIcon : playIcon}
+                </div>
+                <div class="playlist-stats">
+                    ${currentFolder ? folderIcon + safeFolderName : safeFolderName}
+                </div>
+            `;
+          } else {
+            info.innerHTML =
+              '<div class="playlist-header-row">No items</div><div class="playlist-stats">No files in this folder</div>';
+          }
+          lucide.createIcons({ nodes: [info] });
+        }
+      }
 
-    /* ─── Render ─── */
-    async function renderMediaUI() {
-        const streamUrl = `${baseUrl}/api/stream/${encodeURIComponent(filePath)}`;
-        const container = document.getElementById('playerContainer');
-        const wrapper = document.getElementById('playerWrapper');
-        const controls = document.getElementById('playerControls');
-        const audioGrp = document.getElementById('audioToolsGroup');
-        const seekSec = document.getElementById('seekSection');
+      function getFileType(filename, contentType) {
+        const normalized = normalizePath(filename);
+        const ext =
+          (normalized.split("/").pop() || "").split(".").pop().toLowerCase() ||
+          "";
+
+        if (
+          (contentType && contentType.startsWith("video/")) ||
+          ["mp4", "mkv", "avi", "mov", "webm", "m4v"].includes(ext)
+        )
+          return "video";
+        if (
+          (contentType && contentType.startsWith("audio/")) ||
+          ["mp3", "wav", "flac", "aac", "ogg", "m4a", "opus"].includes(ext)
+        )
+          return "audio";
+        if (
+          (contentType && contentType.startsWith("image/")) ||
+          ["jpg", "jpeg", "png", "gif", "webp", "bmp", "svg"].includes(ext)
+        )
+          return "image";
+        if (contentType === "application/pdf" || ext === "pdf") return "pdf";
+        if (
+          [
+            "js",
+            "html",
+            "css",
+            "json",
+            "xml",
+            "py",
+            "java",
+            "kt",
+            "cpp",
+            "c",
+            "php",
+            "rb",
+            "go",
+            "ts",
+            "txt",
+            "md",
+          ].includes(ext)
+        )
+          return "code";
+        return "other";
+      }
+
+      /* ─── Render ─── */
+      async function renderMediaUI() {
+        const encodedPath = encodeURIComponent(filePath);
+        const streamUrl = `${baseUrl}/api/stream?path=${encodedPath}`;
+
+        const container = document.getElementById("playerContainer");
+        const wrapper = document.getElementById("playerWrapper");
+        const controls = document.getElementById("playerControls");
+        const audioGrp = document.getElementById("audioToolsGroup");
+        const seekSec = document.getElementById("seekSection");
 
         stopAmbientLoop();
-        container.classList.remove('ambient-active');
-        document.getElementById('playPauseBtn').innerHTML = '<i data-lucide="play"></i>';
+        stopVisualizerLoop();
+        container.classList.remove("ambient-active");
+        document.getElementById("playPauseBtn").innerHTML =
+          '<i data-lucide="play"></i>';
 
         const type = getFileType(filePath, fileTypeStr);
-        container.setAttribute('data-type', type);
-        controls.style.display = 'flex';
+        container.setAttribute("data-type", type);
 
-        if (type === 'video' || type === 'audio') {
-            audioGrp.style.display = 'flex';
-            seekSec.style.display = 'flex';
-            document.getElementById('speedSelect').value = '1';
-            audioBoost = 1.0;
-            updateBoostUI();
-            resetTimers();
-            updateVolumeUI();
+        const isMediaFile = type !== "other" && type !== "";
+        controls.style.display = isMediaFile ? "flex" : "none";
+
+        if (type === "video" || type === "audio") {
+          audioGrp.style.display = "flex";
+          seekSec.style.display = "flex";
+          document.getElementById("speedSelect").value = "1";
+          audioBoost = 1.0;
+          updateBoostUI();
+          resetTimers();
+          updateVolumeUI();
         } else {
-            audioGrp.style.display = 'none';
-            seekSec.style.display = 'none';
+          audioGrp.style.display = "none";
+          seekSec.style.display = "none";
         }
 
-        document.getElementById('ambientBtn').style.display = type === 'video' ? 'flex' : 'none';
-        document.getElementById('pipBtn').style.display = type === 'video' ? 'flex' : 'none';
+        document.getElementById("ambientBtn").style.display =
+          type === "video" ? "flex" : "none";
+        document.getElementById("pipBtn").style.display =
+          type === "video" ? "flex" : "none";
 
-        if (type === 'video') {
-            wrapper.innerHTML = `<video id="mediaElement" autoplay playsinline webkit-playsinline><source src="${streamUrl}"></video>`;
-            mediaElement = document.getElementById('mediaElement');
-            mediaElement.volume = isMuted ? 0 : volume;
-            setupVideoEvents();
-        } else if (type === 'audio') {
-            wrapper.innerHTML = `<audio id="mediaElement" autoplay><source src="${streamUrl}" type="${escapeHtml(fileTypeStr)}"></audio>`;
-            mediaElement = document.getElementById('mediaElement');
-            mediaElement.volume = isMuted ? 0 : volume;
-            setupAudioEvents();
-        } else if (type === 'image') {
-            wrapper.innerHTML = `<img src="${streamUrl}" class="image-viewer" alt="">`;
-            mediaElement = null;
-        } else if (type === 'pdf') {
+        if (type === "video") {
+          wrapper.innerHTML = `<video id="mediaElement" autoplay playsinline webkit-playsinline controls crossorigin="anonymous"><source src="${streamUrl}"></video>`;
+          mediaElement = document.getElementById("mediaElement");
+          mediaElement.volume = isMuted ? 0 : volume;
+          setupVideoEvents();
+        } else if (type === "audio") {
+          wrapper.innerHTML = `
+            <div class="audio-view">
+              <div class="audio-icon-wrapper" id="audioIconIndicator">
+                 <i data-lucide="music-4" style="width: 36px; height: 36px;"></i>
+              </div>
+              <canvas id="visualizerCanvas"></canvas>
+            </div>
+            <audio id="mediaElement" autoplay crossorigin="anonymous"><source src="${streamUrl}" type="${escapeHtml(fileTypeStr)}"></audio>
+          `;
+          mediaElement = document.getElementById("mediaElement");
+          mediaElement.volume = isMuted ? 0 : volume;
+          setupAudioEvents();
+        } else if (type === "image") {
+          wrapper.innerHTML = `<img src="${streamUrl}" class="image-viewer" alt="" style="max-height: 70vh;">`;
+          mediaElement = null;
+        } else if (type === "pdf") {
+          const isMobile = window.innerWidth <= 768;
+          if (isMobile) {
+            wrapper.innerHTML = `
+                <div style="padding:40px 20px;text-align:center;width:100%;">
+                    <i data-lucide="file-text" style="width:64px;height:64px;display:block;margin:0 auto 16px;color:var(--primary);"></i>
+                    <h3 style="margin-bottom:8px;font-size:1.2rem;">PDF Document</h3>
+                    <p style="color:var(--text-muted);font-size:0.9rem;margin-bottom:24px;">Inline viewing is limited on mobile browsers.</p>
+                    <a href="${streamUrl}" target="_blank" class="download-link">Read PDF</a>
+                </div>`;
+          } else {
             wrapper.innerHTML = `<iframe src="${streamUrl}" class="doc-viewer" title="Document"></iframe>`;
-            mediaElement = null;
-            controls.style.display = 'none';
-        } else if (type === 'code') {
-            try {
-                const r = await fetch(streamUrl);
-                wrapper.innerHTML = `<pre class="code-viewer"><code>${escapeHtml(await r.text())}</code></pre>`;
-            } catch {
-                showError('Failed to load file.');
-            }
-            mediaElement = null;
-            controls.style.display = 'none';
+          }
+          mediaElement = null;
+        } else if (type === "code") {
+          try {
+            const r = await fetch(streamUrl);
+            wrapper.innerHTML = `<pre class="code-viewer"><code>${escapeHtml(await r.text())}</code></pre>`;
+          } catch {
+            showError("Failed to load file.");
+          }
+          mediaElement = null;
         } else {
-            showDownloadOnly(streamUrl);
-            mediaElement = null;
-            controls.style.display = 'none';
+          showDownloadOnly(streamUrl);
+          mediaElement = null;
         }
 
         displayMediaInfo(fileName, fileSize, type, streamUrl);
         updatePlaylistInfo();
         lucide.createIcons();
-    }
+      }
 
-    /* ─── Events ─── */
-    function setupVideoEvents() {
+      /* ─── Events ─── */
+      function setupVideoEvents() {
         if (!mediaElement) return;
-        mediaElement.addEventListener('timeupdate', updateProgress);
-        mediaElement.addEventListener('play', onPlay);
-        mediaElement.addEventListener('pause', onPause);
-        mediaElement.addEventListener('ended', playNext);
-        mediaElement.addEventListener('loadeddata', () => {
-            const c = document.getElementById('ambientCanvas');
-            c.width = 64;
-            c.height = 36;
-            updateProgress();
+        mediaElement.addEventListener("timeupdate", updateProgress);
+        mediaElement.addEventListener("play", onPlay);
+        mediaElement.addEventListener("pause", onPause);
+        mediaElement.addEventListener("ended", playNext);
+        mediaElement.addEventListener("loadeddata", () => {
+          const c = document.getElementById("ambientCanvas");
+          c.width = 64;
+          c.height = 36;
+          updateProgress();
         });
-    }
+      }
 
-    function setupAudioEvents() {
+      function setupAudioEvents() {
         if (!mediaElement) return;
-        mediaElement.addEventListener('timeupdate', updateProgress);
-        mediaElement.addEventListener('play', onPlay);
-        mediaElement.addEventListener('pause', onPause);
-        mediaElement.addEventListener('ended', playNext);
-    }
+        mediaElement.addEventListener("timeupdate", updateProgress);
+        mediaElement.addEventListener("play", onPlay);
+        mediaElement.addEventListener("pause", onPause);
+        mediaElement.addEventListener("ended", playNext);
+      }
 
-    function onPlay() {
+      function onPlay() {
         isPlaying = true;
-        if (audioContext?.state === 'suspended') audioContext.resume();
+        if (audioContext?.state === "suspended") audioContext.resume();
         initAudioProcessor();
-        if (mediaElement.tagName === 'VIDEO' && isAmbientMode) startAmbientLoop();
-        document.getElementById('playPauseBtn').innerHTML = '<i data-lucide="pause"></i>';
-        lucide.createIcons();
-    }
 
-    function onPause() {
+        if (mediaElement.tagName === "VIDEO" && isAmbientMode) {
+          startAmbientLoop();
+        } else if (mediaElement.tagName === "AUDIO") {
+          startVisualizerLoop();
+          const iconInd = document.getElementById("audioIconIndicator");
+          if (iconInd) iconInd.classList.add("playing");
+        }
+
+        document.getElementById("playPauseBtn").innerHTML =
+          '<i data-lucide="pause"></i>';
+        lucide.createIcons();
+      }
+
+      function onPause() {
         isPlaying = false;
         stopAmbientLoop();
-        document.getElementById('playPauseBtn').innerHTML = '<i data-lucide="play"></i>';
-        lucide.createIcons();
-    }
+        stopVisualizerLoop();
+        const iconInd = document.getElementById("audioIconIndicator");
+        if (iconInd) iconInd.classList.remove("playing");
 
-    function initAudioProcessor() {
+        document.getElementById("playPauseBtn").innerHTML =
+          '<i data-lucide="play"></i>';
+        lucide.createIcons();
+      }
+
+      function initAudioProcessor() {
         if (!mediaElement) return;
         try {
-            if (!audioContext) audioContext = new (window.AudioContext || window.webkitAudioContext)();
-            if (!gainNode) {
-                gainNode = audioContext.createGain();
-                gainNode.connect(audioContext.destination);
-            }
-            if (!mediaElement.dataset.processed) {
-                audioContext.createMediaElementSource(mediaElement).connect(gainNode);
-                mediaElement.dataset.processed = 'true';
-            }
+          if (!audioContext) {
+            audioContext = new (
+              window.AudioContext || window.webkitAudioContext
+            )();
+          }
+          if (!analyserNode) {
+            analyserNode = audioContext.createAnalyser();
+            analyserNode.fftSize = 256;
+          }
+          if (!gainNode) {
+            gainNode = audioContext.createGain();
+            gainNode.connect(audioContext.destination);
+          }
+          if (!mediaElement.dataset.processed) {
+            const source = audioContext.createMediaElementSource(mediaElement);
+            source.connect(analyserNode);
+            analyserNode.connect(gainNode);
+            mediaElement.dataset.processed = "true";
+          }
         } catch (e) {
-            console.error('AudioCtx:', e);
+          console.error("AudioCtx Error:", e);
         }
-    }
+      }
 
-    /* ════════════════════════════════
-       SEEKBAR + TIMERS
-    ════════════════════════════════ */
-    function fmtTime(secs) {
-        if (!isFinite(secs) || isNaN(secs)) return '0:00';
+      /* ─── Audio Visualizer ─── */
+      function startVisualizerLoop() {
+        if (
+          !analyserNode ||
+          !mediaElement ||
+          mediaElement.paused ||
+          mediaElement.tagName !== "AUDIO"
+        )
+          return;
+        const canvas = document.getElementById("visualizerCanvas");
+        if (!canvas) return;
+
+        // Ensure exact sizing to prevent blurring
+        const rect = canvas.parentElement.getBoundingClientRect();
+        canvas.width = rect.width;
+        canvas.height = rect.height;
+
+        const ctx = canvas.getContext("2d");
+        const bufferLength = analyserNode.frequencyBinCount;
+        const dataArray = new Uint8Array(bufferLength);
+
+        function draw() {
+          if (!isPlaying || !analyserNode) return;
+
+          visualizerRafId = requestAnimationFrame(draw);
+          analyserNode.getByteFrequencyData(dataArray);
+
+          ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+          const barWidth = (canvas.width / bufferLength) * 2.5;
+          let x = 0;
+          const centerY = canvas.height / 2;
+
+          for (let i = 0; i < bufferLength; i++) {
+            // Smooth scaling of bar height
+            const barHeight = (dataArray[i] / 255) * (canvas.height * 0.7);
+
+            // Create gradient for bars
+            const gradient = ctx.createLinearGradient(
+              0,
+              centerY - barHeight / 2,
+              0,
+              centerY + barHeight / 2,
+            );
+            gradient.addColorStop(0, "#ef4444");
+            gradient.addColorStop(0.5, "#f97316");
+            gradient.addColorStop(1, "#ef4444");
+
+            ctx.fillStyle = gradient;
+            // Draw centered symmetrical bars
+            ctx.fillRect(x, centerY - barHeight / 2, barWidth, barHeight);
+
+            x += barWidth + 2; // + spacing
+          }
+        }
+        draw();
+      }
+
+      function stopVisualizerLoop() {
+        if (visualizerRafId) {
+          cancelAnimationFrame(visualizerRafId);
+          visualizerRafId = null;
+        }
+      }
+
+      /* ════════════════════════════════
+         SEEKBAR + TIMERS
+      ════════════════════════════════ */
+      function fmtTime(secs) {
+        if (!isFinite(secs) || isNaN(secs)) return "0:00";
         secs = Math.max(0, Math.floor(secs));
-        const h = Math.floor(secs / 3600), m = Math.floor((secs % 3600) / 60), s = secs % 60;
-        if (h > 0) return `${h}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
-        return `${m}:${String(s).padStart(2, '0')}`;
-    }
+        const h = Math.floor(secs / 3600),
+          m = Math.floor((secs % 3600) / 60),
+          s = secs % 60;
+        if (h > 0)
+          return `${h}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+        return `${m}:${String(s).padStart(2, "0")}`;
+      }
 
-    function resetTimers() {
-        document.getElementById('timeElapsed').textContent = '0:00';
-        document.getElementById('timeCountdown').textContent = '-0:00';
-        document.getElementById('seekFill').style.width = '0%';
-        document.getElementById('seekThumb').style.left = '0%';
-    }
+      function resetTimers() {
+        document.getElementById("timeElapsed").textContent = "0:00";
+        document.getElementById("timeCountdown").textContent = "-0:00";
+        document.getElementById("seekFill").style.width = "0%";
+        document.getElementById("seekThumb").style.left = "0%";
+      }
 
-    function updateProgress() {
+      function updateProgress() {
         if (!mediaElement?.duration) return;
-        const cur = mediaElement.currentTime, dur = mediaElement.duration, pct = (cur / dur) * 100, left = dur - cur;
-        document.getElementById('seekFill').style.width = `${pct}%`;
-        document.getElementById('seekThumb').style.left = `${pct}%`;
-        document.getElementById('timeElapsed').textContent = fmtTime(cur);
-        const cdEl = document.getElementById('timeCountdown');
+        const cur = mediaElement.currentTime,
+          dur = mediaElement.duration,
+          pct = (cur / dur) * 100,
+          left = dur - cur;
+        document.getElementById("seekFill").style.width = `${pct}%`;
+        document.getElementById("seekThumb").style.left = `${pct}%`;
+        document.getElementById("timeElapsed").textContent = fmtTime(cur);
+        const cdEl = document.getElementById("timeCountdown");
         cdEl.textContent = `-${fmtTime(left)}`;
-        cdEl.classList.toggle('urgent', left < 30 && dur > 0);
-    }
+        cdEl.classList.toggle("urgent", left < 30 && dur > 0);
+      }
 
-    /* Seek interactions */
-    const seekWrap = document.getElementById('seekTrackWrap'), seekPreview = document.getElementById('seekPreview');
-    let seekDragging = false;
+      const seekWrap = document.getElementById("seekTrackWrap"),
+        seekPreview = document.getElementById("seekPreview");
+      let seekDragging = false;
 
-    function clientXFromEvent(e) {
+      function clientXFromEvent(e) {
         return e.touches ? e.touches[0].clientX : e.clientX;
-    }
-
-    function posToFraction(e, elem) {
+      }
+      function posToFraction(e, elem) {
         const rect = elem.getBoundingClientRect();
-        return Math.max(0, Math.min(1, (clientXFromEvent(e) - rect.left) / rect.width));
-    }
-
-    function doSeek(e) {
+        return Math.max(
+          0,
+          Math.min(1, (clientXFromEvent(e) - rect.left) / rect.width),
+        );
+      }
+      function doSeek(e) {
         if (!mediaElement?.duration) return;
-        const frac = posToFraction(e, seekWrap);
-        mediaElement.currentTime = frac * mediaElement.duration;
+        mediaElement.currentTime =
+          posToFraction(e, seekWrap) * mediaElement.duration;
         updateProgress();
-    }
-
-    function updatePreview(e) {
+      }
+      function updatePreview(e) {
         if (!mediaElement?.duration) return;
         const frac = posToFraction(e, seekWrap);
         seekPreview.textContent = fmtTime(frac * mediaElement.duration);
         seekPreview.style.left = `${frac * 100}%`;
-        const ww = seekWrap.getBoundingClientRect().width, px = frac * ww;
-        if (px < 36) seekPreview.style.transform = 'translateX(0)';
-        else if (px > ww - 36) seekPreview.style.transform = 'translateX(-100%)';
-        else seekPreview.style.transform = 'translateX(-50%)';
-    }
+        const ww = seekWrap.getBoundingClientRect().width,
+          px = frac * ww;
+        if (px < 36) seekPreview.style.transform = "translateX(0)";
+        else if (px > ww - 36)
+          seekPreview.style.transform = "translateX(-100%)";
+        else seekPreview.style.transform = "translateX(-50%)";
+      }
 
-    seekWrap.addEventListener('click', doSeek);
-    seekWrap.addEventListener('mousemove', updatePreview);
-    seekWrap.addEventListener('mousedown', e => {
+      seekWrap.addEventListener("click", doSeek);
+      seekWrap.addEventListener("mousemove", updatePreview);
+      seekWrap.addEventListener("mousedown", (e) => {
         seekDragging = true;
-        seekWrap.classList.add('dragging');
+        seekWrap.classList.add("dragging");
         doSeek(e);
-    });
-    document.addEventListener('mousemove', e => {
+      });
+      document.addEventListener("mousemove", (e) => {
         if (seekDragging) doSeek(e);
-    });
-    document.addEventListener('mouseup', () => {
+      });
+      document.addEventListener("mouseup", () => {
         seekDragging = false;
-        seekWrap.classList.remove('dragging');
-    });
-    seekWrap.addEventListener('touchstart', e => {
-        seekDragging = true;
-        seekWrap.classList.add('dragging');
-        doSeek(e);
-    }, {passive: true});
-    seekWrap.addEventListener('touchmove', e => {
-        if (seekDragging) doSeek(e);
-    }, {passive: true});
-    seekWrap.addEventListener('touchend', () => {
+        seekWrap.classList.remove("dragging");
+      });
+      seekWrap.addEventListener(
+        "touchstart",
+        (e) => {
+          seekDragging = true;
+          seekWrap.classList.add("dragging");
+          doSeek(e);
+        },
+        { passive: true },
+      );
+      seekWrap.addEventListener(
+        "touchmove",
+        (e) => {
+          if (seekDragging) doSeek(e);
+        },
+        { passive: true },
+      );
+      seekWrap.addEventListener("touchend", () => {
         seekDragging = false;
-        seekWrap.classList.remove('dragging');
-    });
+        seekWrap.classList.remove("dragging");
+      });
 
-    /* ─── Playback Controls ─── */
-    function togglePlayPause() {
+      /* ─── Playback Controls ─── */
+      function togglePlayPause() {
         if (!mediaElement) return;
         mediaElement.paused ? mediaElement.play() : mediaElement.pause();
-    }
-
-    function seekMedia(seconds) {
+      }
+      function seekMedia(seconds) {
         if (!mediaElement) return;
-        mediaElement.currentTime = Math.max(0, Math.min(mediaElement.duration, mediaElement.currentTime + seconds));
-        showOSD(seconds > 0 ? 'fast-forward' : 'rewind', `${seconds > 0 ? '+' : ''}${seconds}s`);
-    }
-
-    function seekToPercent(pct) {
+        mediaElement.currentTime = Math.max(
+          0,
+          Math.min(mediaElement.duration, mediaElement.currentTime + seconds),
+        );
+        showOSD(
+          seconds > 0 ? "fast-forward" : "rewind",
+          `${seconds > 0 ? "+" : ""}${seconds}s`,
+        );
+      }
+      function seekToPercent(pct) {
         if (!mediaElement?.duration) return;
         mediaElement.currentTime = mediaElement.duration * pct;
-        showOSD('clock', `${Math.round(pct * 100)}%`);
-    }
-
-    function setPlaybackSpeed(val) {
+        showOSD("clock", `${Math.round(pct * 100)}%`);
+      }
+      function setPlaybackSpeed(val) {
         if (!mediaElement) return;
         mediaElement.playbackRate = parseFloat(val);
-        document.getElementById('speedSelect').value = String(val);
-        showOSD('gauge', `${val}×`);
-    }
+        document.getElementById("speedSelect").value = String(val);
+        showOSD("gauge", `${val}×`);
+      }
+      function changeSpeed(delta) {
+        const cur = parseFloat(document.getElementById("speedSelect").value),
+          idx = SPEEDS.findIndex((s) => Math.abs(s - cur) < 0.01);
+        setPlaybackSpeed(
+          SPEEDS[Math.max(0, Math.min(SPEEDS.length - 1, idx + delta))],
+        );
+      }
 
-    function changeSpeed(delta) {
-        const cur = parseFloat(document.getElementById('speedSelect').value),
-            idx = SPEEDS.findIndex(s => Math.abs(s - cur) < 0.01);
-        setPlaybackSpeed(SPEEDS[Math.max(0, Math.min(SPEEDS.length - 1, idx + delta))]);
-    }
-
-    /* ─── Custom UI Sliders (Vol/Boost) ─── */
-    function attachDragLogic(wrapId, onChange) {
+      /* ─── Custom UI Sliders ─── */
+      function attachDragLogic(wrapId, onChange) {
         const wrap = document.getElementById(wrapId);
-        if (!wrap) return; // Safety check
+        if (!wrap) return;
         let isDragging = false;
-
         function update(e) {
-            onChange(posToFraction(e, wrap));
+          onChange(posToFraction(e, wrap));
         }
-
-        wrap.addEventListener('mousedown', e => {
+        wrap.addEventListener("mousedown", (e) => {
+          isDragging = true;
+          wrap.classList.add("dragging");
+          update(e);
+        });
+        document.addEventListener("mousemove", (e) => {
+          if (isDragging) update(e);
+        });
+        document.addEventListener("mouseup", () => {
+          isDragging = false;
+          wrap.classList.remove("dragging");
+        });
+        wrap.addEventListener(
+          "touchstart",
+          (e) => {
             isDragging = true;
-            wrap.classList.add('dragging');
+            wrap.classList.add("dragging");
             update(e);
-        });
-        document.addEventListener('mousemove', e => {
+          },
+          { passive: true },
+        );
+        wrap.addEventListener(
+          "touchmove",
+          (e) => {
             if (isDragging) update(e);
+          },
+          { passive: true },
+        );
+        wrap.addEventListener("touchend", () => {
+          isDragging = false;
+          wrap.classList.remove("dragging");
         });
-        document.addEventListener('mouseup', () => {
-            isDragging = false;
-            wrap.classList.remove('dragging');
-        });
-        wrap.addEventListener('touchstart', e => {
-            isDragging = true;
-            wrap.classList.add('dragging');
-            update(e);
-        }, {passive: true});
-        wrap.addEventListener('touchmove', e => {
-            if (isDragging) update(e);
-        }, {passive: true});
-        wrap.addEventListener('touchend', () => {
-            isDragging = false;
-            wrap.classList.remove('dragging');
-        });
-    }
+      }
 
-    function setupMiniSliders() {
-        attachDragLogic('volumeWrap', pos => {
-            volume = pos;
-            isMuted = false;
-            if (mediaElement) mediaElement.volume = volume;
-            updateVolumeUI();
-            showOSD('volume-2', `Vol ${Math.round(volume * 100)}%`);
+      function setupMiniSliders() {
+        attachDragLogic("volumeWrap", (pos) => {
+          volume = pos;
+          isMuted = false;
+          if (mediaElement) mediaElement.volume = volume;
+          updateVolumeUI();
+          showOSD("volume-2", `Vol ${Math.round(volume * 100)}%`);
         });
-        attachDragLogic('boostWrap', pos => {
-            audioBoost = 1 + (pos * 4); // Map 0-1 to 1.0x - 5.0x
-            if (gainNode) gainNode.gain.value = audioBoost;
-            updateBoostUI();
-            showOSD('speaker', `Boost ${audioBoost.toFixed(1)}x`);
+        attachDragLogic("boostWrap", (pos) => {
+          audioBoost = 1 + pos * 4;
+          if (gainNode) gainNode.gain.value = audioBoost;
+          updateBoostUI();
+          showOSD("speaker", `Boost ${audioBoost.toFixed(1)}x`);
         });
-    }
+      }
 
-    function updateVolumeUI() {
-        const fill = document.getElementById('volumeFill');
-        if (fill) fill.style.width = isMuted ? '0%' : `${volume * 100}%`;
-
-        // Fix: Safely update lucide icon via innerHTML
-        const muteBtn = document.getElementById('muteBtn');
+      function updateVolumeUI() {
+        const fill = document.getElementById("volumeFill");
+        if (fill) fill.style.width = isMuted ? "0%" : `${volume * 100}%`;
+        const muteBtn = document.getElementById("muteBtn");
         if (muteBtn) {
-            const iconName = (isMuted || volume === 0) ? 'volume-x' : volume < 0.5 ? 'volume-1' : 'volume-2';
-            muteBtn.innerHTML = `<i data-lucide="${iconName}"></i>`;
-            lucide.createIcons({nodes: [muteBtn]});
+          const iconName =
+            isMuted || volume === 0
+              ? "volume-x"
+              : volume < 0.5
+                ? "volume-1"
+                : "volume-2";
+          muteBtn.innerHTML = `<i data-lucide="${iconName}"></i>`;
+          lucide.createIcons({ nodes: [muteBtn] });
         }
-    }
+      }
 
-    function toggleMute() {
+      function toggleMute() {
         isMuted = !isMuted;
         if (mediaElement) mediaElement.volume = isMuted ? 0 : volume;
         updateVolumeUI();
-        showOSD(isMuted ? 'volume-x' : 'volume-2', isMuted ? 'Muted' : `Vol ${Math.round(volume * 100)}%`);
-    }
+        showOSD(
+          isMuted ? "volume-x" : "volume-2",
+          isMuted ? "Muted" : `Vol ${Math.round(volume * 100)}%`,
+        );
+      }
 
-    function changeVolume(delta) {
+      function changeVolume(delta) {
         volume = Math.max(0, Math.min(1, volume + delta));
         if (delta > 0 && isMuted) isMuted = false;
         if (mediaElement) mediaElement.volume = isMuted ? 0 : volume;
         updateVolumeUI();
-        showOSD(volume === 0 ? 'volume-x' : 'volume-2', `Vol ${Math.round(volume * 100)}%`);
-    }
+        showOSD(
+          volume === 0 ? "volume-x" : "volume-2",
+          `Vol ${Math.round(volume * 100)}%`,
+        );
+      }
 
-    function updateBoostUI() {
-        const fill = document.getElementById('boostFill'), valText = document.getElementById('boostValue');
+      function updateBoostUI() {
+        const fill = document.getElementById("boostFill"),
+          valText = document.getElementById("boostValue");
         if (fill) fill.style.width = `${((audioBoost - 1) / 4) * 100}%`;
         if (valText) valText.textContent = `${audioBoost.toFixed(1)}×`;
-    }
+      }
 
-    /* ─── PiP & Fullscreen ─── */
-    async function togglePiP() {
-        if (!mediaElement || mediaElement.tagName !== 'VIDEO') return;
+      /* ─── PiP & Fullscreen ─── */
+      async function togglePiP() {
+        if (!mediaElement || mediaElement.tagName !== "VIDEO") return;
         try {
-            if (document.pictureInPictureElement) {
-                await document.exitPictureInPicture();
-                showOSD('picture-in-picture-2', 'PiP Off');
-            } else {
-                await mediaElement.requestPictureInPicture();
-                showOSD('picture-in-picture-2', 'PiP On');
-            }
+          if (document.pictureInPictureElement) {
+            await document.exitPictureInPicture();
+            showOSD("picture-in-picture-2", "PiP Off");
+          } else {
+            await mediaElement.requestPictureInPicture();
+            showOSD("picture-in-picture-2", "PiP On");
+          }
         } catch {
-            showOSD('alert-circle', 'PiP unavailable');
+          showOSD("alert-circle", "PiP unavailable");
         }
-    }
+      }
 
-    function toggleFullscreen() {
-        const t = mediaElement || document.getElementById('playerWrapper');
-        if (!document.fullscreenElement) (t.requestFullscreen || t.webkitRequestFullscreen).call(t);
-        else (document.exitFullscreen || document.webkitExitFullscreen).call(document);
-    }
+      function toggleFullscreen() {
+        const t = mediaElement || document.getElementById("playerWrapper");
+        if (!document.fullscreenElement)
+          (t.requestFullscreen || t.webkitRequestFullscreen).call(t);
+        else
+          (document.exitFullscreen || document.webkitExitFullscreen).call(
+            document,
+          );
+      }
 
-    /* ─── Shuffle / Next / Prev ─── */
-    function toggleShuffle() {
+      /* ─── Navigation ─── */
+      function toggleShuffle() {
         isShuffle = !isShuffle;
-        const btn = document.getElementById('shuffleBtn');
-        isShuffle ? btn.classList.add('active') : btn.classList.remove('active');
+        const btn = document.getElementById("shuffleBtn");
+        if (isShuffle) {
+          btn.classList.add("active");
+          showOSD("shuffle", "Shuffle ON");
+        } else {
+          btn.classList.remove("active");
+          showOSD("shuffle", "Shuffle OFF");
+        }
         updatePlaylistInfo();
-        showOSD('shuffle', isShuffle ? 'Shuffle ON' : 'Shuffle OFF');
-    }
+      }
 
-    function playNext() {
-        if (playlist.length <= 1) return;
-        currentIndex = isShuffle ? randomIdx() : (currentIndex + 1) % playlist.length;
-        transitionToNewMedia(playlist[currentIndex]);
-    }
+      function playNext() {
+        if (!playlist.length || playlist.length <= 1) {
+          showOSD("info", "No more items in this folder");
+          return;
+        }
+        currentIndex = isShuffle
+          ? randomIdx()
+          : (currentIndex + 1) % playlist.length;
+        processNextItem(playlist[currentIndex]);
+      }
 
-    function playPrev() {
-        if (playlist.length <= 1) return;
-        currentIndex = isShuffle ? randomIdx() : (currentIndex - 1 + playlist.length) % playlist.length;
-        transitionToNewMedia(playlist[currentIndex]);
-    }
+      function playPrev() {
+        if (!playlist.length || playlist.length <= 1) {
+          showOSD("info", "No more items in this folder");
+          return;
+        }
+        currentIndex = isShuffle
+          ? randomIdx()
+          : (currentIndex - 1 + playlist.length) % playlist.length;
+        processNextItem(playlist[currentIndex]);
+      }
 
-    function randomIdx() {
-        let n;
-        do {
-            n = Math.floor(Math.random() * playlist.length);
-        } while (n === currentIndex && playlist.length > 1);
-        return n;
-    }
+      function processNextItem(item) {
+        if (item.isDirectory) fetchAndPlayFirstFileInFolder(item.path);
+        else transitionToNewMedia(item);
+      }
 
-    function transitionToNewMedia(item) {
-        filePath = item.filename;
-        fileTypeStr = item.contentType || '';
-        fileName = item.title || item.filename.split('/').pop();
+      async function fetchAndPlayFirstFileInFolder(folderPath) {
+        try {
+          const response = await fetch(
+            `${baseUrl}/api/folders/contents?path=${encodeURIComponent(folderPath)}`,
+          );
+          if (response.ok) {
+            const data = await response.json();
+            const firstFile = data.files[0];
+            if (firstFile) {
+              currentFolder = folderPath;
+              const url = new URL(window.location);
+              url.searchParams.set(
+                "path",
+                firstFile.path || firstFile.filename,
+              );
+              url.searchParams.set("type", firstFile.contentType || "");
+              url.searchParams.set(
+                "name",
+                firstFile.name || firstFile.filename,
+              );
+              url.searchParams.set("size", firstFile.size || 0);
+              url.searchParams.set("currentFolder", folderPath);
+              window.history.replaceState({}, "", url);
+              filePath = firstFile.path || firstFile.filename;
+              fileTypeStr = firstFile.contentType || "";
+              fileName = firstFile.name || firstFile.filename;
+              fileSize = firstFile.size || 0;
+              await fetchPlaylist();
+              renderMediaUI();
+              showOSD(
+                "folder",
+                `Opened folder: ${folderPath.split("/").pop()}`,
+              );
+            } else {
+              showOSD("info", "Folder has no playable files");
+            }
+          }
+        } catch (e) {
+          showOSD("alert-circle", "Cannot open folder");
+        }
+      }
+
+      function transitionToNewMedia(item) {
+        filePath = item.path || item.filename;
+        fileTypeStr = item.contentType || "";
+        fileName = item.name || item.filename || "Unknown";
         fileSize = item.size || 0;
         const url = new URL(window.location);
-        url.searchParams.set('file', filePath);
-        url.searchParams.set('type', fileTypeStr);
-        url.searchParams.set('name', fileName);
-        url.searchParams.set('size', fileSize);
-        url.searchParams.set('currentFolder', currentFolder);
-        window.history.replaceState({}, '', url);
+        url.searchParams.set("path", filePath);
+        url.searchParams.set("type", fileTypeStr);
+        url.searchParams.set("name", fileName);
+        url.searchParams.set("size", fileSize);
+        url.searchParams.set("currentFolder", currentFolder);
+        window.history.replaceState({}, "", url);
         renderMediaUI();
-    }
+        showOSD("skip-forward", `Now playing: ${fileName}`);
+      }
 
-    /* ─── Ambilight 2.0 ─── */
-    function startAmbientLoop() {
-        if (!isAmbientMode || !mediaElement || mediaElement.tagName !== 'VIDEO') return;
-        const canvas = document.getElementById('ambientCanvas'),
-            ctx = canvas.getContext('2d', {alpha: false, willReadFrequently: true}), root = document.documentElement;
-        document.getElementById('playerContainer').classList.add('ambient-active');
+      function randomIdx() {
+        let n;
+        do {
+          n = Math.floor(Math.random() * playlist.length);
+        } while (n === currentIndex && playlist.length > 1);
+        return n;
+      }
 
+      /* ─── Ambilight (Video) ─── */
+      function startAmbientLoop() {
+        if (!isAmbientMode || !mediaElement || mediaElement.tagName !== "VIDEO")
+          return;
+        const canvas = document.getElementById("ambientCanvas"),
+          ctx = canvas.getContext("2d", {
+            alpha: false,
+            willReadFrequently: true,
+          }),
+          root = document.documentElement;
+        document
+          .getElementById("playerContainer")
+          .classList.add("ambient-active");
         function sample() {
-            if (!mediaElement || mediaElement.paused || mediaElement.ended) return;
-            ctx.drawImage(mediaElement, 0, 0, canvas.width, canvas.height);
-            const W = canvas.width, H = canvas.height, e = 4;
-            root.style.setProperty('--ambient-tl', avgColor(ctx, 0, 0, W / 2, e));
-            root.style.setProperty('--ambient-tr', avgColor(ctx, W / 2, 0, W / 2, e));
-            root.style.setProperty('--ambient-bl', avgColor(ctx, 0, H - e, W / 2, e));
-            root.style.setProperty('--ambient-br', avgColor(ctx, W / 2, H - e, W / 2, e));
-            ambientRafId = requestAnimationFrame(sample);
+          if (!mediaElement || mediaElement.paused || mediaElement.ended)
+            return;
+          ctx.drawImage(mediaElement, 0, 0, canvas.width, canvas.height);
+          const W = canvas.width,
+            H = canvas.height,
+            e = 4;
+          root.style.setProperty("--ambient-tl", avgColor(ctx, 0, 0, W / 2, e));
+          root.style.setProperty(
+            "--ambient-tr",
+            avgColor(ctx, W / 2, 0, W / 2, e),
+          );
+          root.style.setProperty(
+            "--ambient-bl",
+            avgColor(ctx, 0, H - e, W / 2, e),
+          );
+          root.style.setProperty(
+            "--ambient-br",
+            avgColor(ctx, W / 2, H - e, W / 2, e),
+          );
+          ambientRafId = requestAnimationFrame(sample);
         }
-
         ambientRafId = requestAnimationFrame(sample);
-    }
+      }
 
-    function stopAmbientLoop() {
+      function stopAmbientLoop() {
         cancelAnimationFrame(ambientRafId);
         ambientRafId = null;
-        const c = document.getElementById('playerContainer');
-        if (c) c.classList.remove('ambient-active');
+        const c = document.getElementById("playerContainer");
+        if (c) c.classList.remove("ambient-active");
         const r = document.documentElement;
-        ['--ambient-tl', '--ambient-tr', '--ambient-bl', '--ambient-br'].forEach(v => r.style.setProperty(v, '#000'));
-    }
+        [
+          "--ambient-tl",
+          "--ambient-tr",
+          "--ambient-bl",
+          "--ambient-br",
+        ].forEach((v) => r.style.setProperty(v, "#000"));
+      }
 
-    function avgColor(ctx, x, y, w, h) {
+      function avgColor(ctx, x, y, w, h) {
         x = Math.floor(x);
         y = Math.floor(y);
         w = Math.max(1, Math.floor(w));
         h = Math.max(1, Math.floor(h));
         const d = ctx.getImageData(x, y, w, h).data;
-        let r = 0, g = 0, b = 0, n = d.length / 4;
+        let r = 0,
+          g = 0,
+          b = 0,
+          n = d.length / 4;
         for (let i = 0; i < d.length; i += 4) {
-            r += d[i];
-            g += d[i + 1];
-            b += d[i + 2];
+          r += d[i];
+          g += d[i + 1];
+          b += d[i + 2];
         }
-        return `rgb(${r / n | 0},${g / n | 0},${b / n | 0})`;
-    }
+        return `rgb(${(r / n) | 0},${(g / n) | 0},${(b / n) | 0})`;
+      }
 
-    function toggleAmbientMode() {
+      function toggleAmbientMode() {
         isAmbientMode = !isAmbientMode;
-        const btn = document.getElementById('ambientBtn');
+        const btn = document.getElementById("ambientBtn");
         if (isAmbientMode) {
-            btn.classList.add('active');
-            if (mediaElement && !mediaElement.paused && mediaElement.tagName === 'VIDEO') startAmbientLoop();
-            showOSD('sun-dim', 'Ambilight ON');
+          btn.classList.add("active");
+          if (
+            mediaElement &&
+            !mediaElement.paused &&
+            mediaElement.tagName === "VIDEO"
+          )
+            startAmbientLoop();
+          showOSD("sun-dim", "Ambilight ON");
         } else {
-            btn.classList.remove('active');
-            stopAmbientLoop();
-            showOSD('sun-dim', 'Ambilight OFF');
+          btn.classList.remove("active");
+          stopAmbientLoop();
+          showOSD("sun-dim", "Ambilight OFF");
         }
-    }
+      }
 
-    /* ─── Info helpers ─── */
-    function showDownloadOnly(url) {
-        document.getElementById('playerWrapper').innerHTML = `<div style="padding:50px;text-align:center;color:var(--text-muted);"><i data-lucide="file-x" style="width:56px;height:56px;display:block;margin:0 auto 14px;"></i><p style="font-size:1rem;font-weight:600;margin-bottom:6px;">Preview Unavailable</p><a href="${url}" class="download-link" download><i data-lucide="download"></i> Download</a></div>`;
+      function normalizePath(path) {
+        return !path ? "" : path.replace(/\\/g, "/");
+      }
+
+      /* ─── Info helpers ─── */
+      function showDownloadOnly(url) {
+        document.getElementById("playerWrapper").innerHTML =
+          `<div style="padding:50px;text-align:center;color:var(--text-muted);"><i data-lucide="file-x" style="width:56px;height:56px;display:block;margin:0 auto 14px;"></i><p style="font-size:1rem;font-weight:600;margin-bottom:6px;">Preview Unavailable</p><a href="${url}" class="download-link" download>Download</a></div>`;
         lucide.createIcons();
-    }
+      }
 
-    function showError(msg) {
-        document.getElementById('playerWrapper').innerHTML = `<div style="padding:50px;text-align:center;"><i data-lucide="alert-circle" style="width:56px;height:56px;display:block;margin:0 auto 14px;color:#ef4444;"></i><p style="font-weight:600;">${msg}</p></div>`;
+      function showError(msg) {
+        document.getElementById("playerWrapper").innerHTML =
+          `<div style="padding:50px;text-align:center;"><i data-lucide="alert-circle" style="width:56px;height:56px;display:block;margin:0 auto 14px;color:#ef4444;"></i><p style="font-weight:600;">${msg}</p></div>`;
         lucide.createIcons();
-    }
+      }
 
-    function displayMediaInfo(name, size, type, url) {
-        const icons = {video: 'video', audio: 'music', image: 'image', pdf: 'file-text', code: 'file-text'};
-        document.getElementById('mediaInfo').innerHTML = `<div class="stats-dashboard"><div class="stat-card"><div class="stat-label"><i data-lucide="${icons[type] || 'file'}"></i> Filename</div><div class="stat-value">${escapeHtml(name)}</div></div><div class="stat-card"><div class="stat-label"><i data-lucide="hard-drive"></i> Size</div><div class="stat-value">${formatFileSize(parseInt(size))}</div></div><div class="stat-card"><div class="stat-label"><i data-lucide="info"></i> Type</div><div class="stat-value" style="text-transform:uppercase;">${type}</div></div></div><div style="text-align:center;"><a href="${url}" class="download-link" download><i data-lucide="download"></i> Download Original File</a></div>`;
+      function displayMediaInfo(name, size, type, url) {
+        const icons = {
+          video: "video",
+          audio: "music",
+          image: "image",
+          pdf: "file-text",
+          code: "file-text",
+        };
+        document.getElementById("mediaInfo").innerHTML = `
+            <div class="stats-dashboard">
+                <div class="stat-card">
+                    <div class="stat-label"><i data-lucide="${icons[type] || "file"}"></i> Filename</div>
+                    <div class="stat-value">${escapeHtml(name)}</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label"><i data-lucide="hard-drive"></i> Size</div>
+                    <div class="stat-value">${formatFileSize(parseInt(size))}</div>
+                </div>
+            </div>
+            <div style="text-align:center;">
+                <a href="${url}" class="download-link" download><i data-lucide="download"></i> Download Original</a>
+            </div>
+        `;
         lucide.createIcons();
-    }
+      }
 
-    function formatFileSize(b) {
-        if (!b || b === 0) return '0 B';
-        const u = ['B', 'KB', 'MB', 'GB', 'TB'], i = Math.floor(Math.log(b) / Math.log(1024));
+      function formatFileSize(b) {
+        if (!b || b === 0) return "0 B";
+        const u = ["B", "KB", "MB", "GB", "TB"],
+          i = Math.floor(Math.log(b) / Math.log(1024));
         return `${(b / Math.pow(1024, i)).toFixed(1)} ${u[i]}`;
-    }
+      }
 
-    function escapeHtml(t) {
-        const d = document.createElement('div');
+      function escapeHtml(t) {
+        const d = document.createElement("div");
         d.textContent = t;
         return d.innerHTML;
-    }
+      }
 
-    /* ─── Keyboard Shortcuts ─── */
-    document.addEventListener('keydown', e => {
-        if (['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement.tagName)) return;
+      document.addEventListener("keydown", (e) => {
+        if (
+          ["INPUT", "TEXTAREA", "SELECT"].includes(
+            document.activeElement.tagName,
+          )
+        )
+          return;
         const key = e.key;
         switch (key) {
-            case'f':
-            case'F':
-                e.preventDefault();
-                toggleFullscreen();
-                break;
-            case'k':
-            case'K':
-            case' ':
-                e.preventDefault();
-                togglePlayPause();
-                break;
-            case'j':
-            case'J':
-                e.preventDefault();
-                seekMedia(-10);
-                break;
-            case'l':
-            case'L':
-                e.preventDefault();
-                seekMedia(10);
-                break;
-            case's':
-            case'S':
-                e.preventDefault();
-                toggleShuffle();
-                break;
-            case'a':
-            case'A':
-                e.preventDefault();
-                toggleAmbientMode();
-                break;
-            case'i':
-            case'I':
-                e.preventDefault();
-                togglePiP();
-                break;
-            case'm':
-            case'M':
-                e.preventDefault();
-                toggleMute();
-                break;
-            case'ArrowUp':
-                e.preventDefault();
-                changeVolume(0.05);
-                break;
-            case'ArrowDown':
-                e.preventDefault();
-                changeVolume(-0.05);
-                break;
-            case'N':
-                if (e.shiftKey) {
-                    e.preventDefault();
-                    playNext();
-                }
-                break;
-            case'P':
-                if (e.shiftKey) {
-                    e.preventDefault();
-                    playPrev();
-                }
-                break;
-            case'>':
-                if (e.shiftKey) {
-                    e.preventDefault();
-                    changeSpeed(+1);
-                }
-                break;
-            case'<':
-                if (e.shiftKey) {
-                    e.preventDefault();
-                    changeSpeed(-1);
-                }
-                break;
-            default:
-                if (key >= '1' && key <= '9') {
-                    e.preventDefault();
-                    seekToPercent(parseInt(key) * 0.1);
-                }
+          case "f":
+          case "F":
+            e.preventDefault();
+            toggleFullscreen();
+            break;
+          case "k":
+          case "K":
+          case " ":
+            e.preventDefault();
+            togglePlayPause();
+            break;
+          case "j":
+          case "J":
+            e.preventDefault();
+            seekMedia(-10);
+            break;
+          case "l":
+          case "L":
+            e.preventDefault();
+            seekMedia(10);
+            break;
+          case "s":
+          case "S":
+            e.preventDefault();
+            toggleShuffle();
+            break;
+          case "a":
+          case "A":
+            e.preventDefault();
+            toggleAmbientMode();
+            break;
+          case "i":
+          case "I":
+            e.preventDefault();
+            togglePiP();
+            break;
+          case "m":
+          case "M":
+            e.preventDefault();
+            toggleMute();
+            break;
+          case "ArrowUp":
+            e.preventDefault();
+            changeVolume(0.05);
+            break;
+          case "ArrowDown":
+            e.preventDefault();
+            changeVolume(-0.05);
+            break;
+          case "N":
+            if (e.shiftKey) {
+              e.preventDefault();
+              playNext();
+            }
+            break;
+          case "P":
+            if (e.shiftKey) {
+              e.preventDefault();
+              playPrev();
+            }
+            break;
+          case ">":
+            if (e.shiftKey) {
+              e.preventDefault();
+              changeSpeed(+1);
+            }
+            break;
+          case "<":
+            if (e.shiftKey) {
+              e.preventDefault();
+              changeSpeed(-1);
+            }
+            break;
+          default:
+            if (key >= "1" && key <= "9") {
+              e.preventDefault();
+              seekToPercent(parseInt(key) * 0.1);
+            }
         }
-    });
+      });
 
-    initPlayer();
-</script>
-</body>
+      window.addEventListener("resize", () => {
+        if (mediaElement && mediaElement.tagName === "AUDIO") {
+          const canvas = document.getElementById("visualizerCanvas");
+          if (canvas) {
+            const rect = canvas.parentElement.getBoundingClientRect();
+            canvas.width = rect.width;
+            canvas.height = rect.height;
+          }
+        }
+      });
+
+      initPlayer();
+    </script>
+  </body>
 </html>

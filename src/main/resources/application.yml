@@ -5,60 +5,49 @@ server:
     max-swallow-size: -1
     max-http-form-post-size: -1
     connection-timeout: 5m
-    max-connections: 1000
-    accept-count: 100
-  compression:
-    enabled: true
-    mime-types: application/javascript,text/css,text/html,application/json
-    min-response-size: 2048
+    threads:
+      max: 200
+      min-spare: 10
 
 spring:
+  application:
+    name: file-transfer-server
   servlet:
     multipart:
       enabled: true
       max-file-size: ${FILE_MAX_SIZE:1GB}
       max-request-size: ${FILE_MAX_SIZE:1GB}
       file-size-threshold: 2MB
-      location: /tmp
   web:
     resources:
       static-locations: classpath:/static/
       add-mappings: true
       cache:
         period: 3600
-  jackson:
-    serialization:
-      # Remove write-dates-as-timestamps as it's not valid in newer Jackson versions
-      # Use the correct enum values
-      INDENT_OUTPUT: false
-      FAIL_ON_EMPTY_BEANS: false
-      WRAP_ROOT_VALUE: false
-    deserialization:
-      FAIL_ON_UNKNOWN_PROPERTIES: false
-    default-property-inclusion: non_null
-
-  mvc:
-    favicon:
-      enabled: false
 
 file:
   storage:
     path: ${FILE_STORAGE_PATH:C:/Users/Vasu/Downloads/Telegram Desktop}
   max-size: ${FILE_MAX_SIZE:1073741824}
-  allowed-extensions: ${ALLOWED_EXTENSIONS:*}
-  thumbnail:
-    size: 200x200
-    quality: 0.8
 
 logging:
   level:
     root: INFO
-    com.filetransferserver: DEBUG
+    org.vng.filetransferserver: DEBUG
     org.springframework.web: INFO
-  file:
-    name: ./logs/file-transfer-server.log
-    max-size: 10MB
-    max-history: 30
   pattern:
     console: "%d{yyyy-MM-dd HH:mm:ss} - %msg%n"
     file: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+  file:
+    name: logs/file-transfer-server.log
+    max-size: 10MB
+    max-history: 30
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      show-details: always

@@ -1,6 +1,5 @@
 package org.vng.filetransferserver.dto
 
-
 data class FolderContentsDTO(
     val currentPath: String,
     val parentPath: String?,
