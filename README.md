@@ -140,6 +140,7 @@ The server starts on port `9090` by default and is accessible at:
 ### Screenshots
 ![Screenshot1](/src/main/resources/static/dashboard.png)
 ![Screenshot1](/src/main/resources/static/search_preview.png)
+
 ![Screenshot1](/src/main/resources/static/video_preview.png)
 ![Screenshot1](/src/main/resources/static/music_preview.png)
 ![Screenshot1](/src/main/resources/static/images_preview.png)
