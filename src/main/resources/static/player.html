@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta
       name="viewport"
-      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"
     />
     <title>Media Player - Media Hub</title>
     <script src="https://unpkg.com/lucide@latest"></script>
@@ -40,9 +40,6 @@
         --text-main: #0f172a;
         --text-muted: #64748b;
         --border: rgba(0, 0, 0, 0.08);
-        --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-        --shadow-lg: 0 10px 25px -3px rgba(0, 0, 0, 0.1);
-        --shadow-glow: 0 4px 14px rgba(249, 115, 22, 0.2);
       }
 
       *,
@@ -93,7 +90,7 @@
           box-shadow: 0 0 15px rgba(249, 115, 22, 0.2);
         }
         50% {
-          box-shadow: 0 0 30px rgba(249, 115, 22, 0.5);
+          box-shadow: 0 0 30px rgba(249, 115, 22, 0.6);
         }
         100% {
           box-shadow: 0 0 15px rgba(249, 115, 22, 0.2);
@@ -105,7 +102,10 @@
         width: 100%;
         max-width: 1400px;
         margin: 0 auto;
-        padding: clamp(8px, 3vw, 24px);
+        padding: clamp(12px, 3vw, 24px);
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
       }
 
       .header {
@@ -113,23 +113,22 @@
         backdrop-filter: blur(12px);
         -webkit-backdrop-filter: blur(12px);
         border-radius: var(--radius-lg);
-        padding: clamp(10px, 2vw, 16px) clamp(12px, 2.5vw, 20px);
-        margin-bottom: 16px;
+        padding: clamp(12px, 2vw, 16px) clamp(16px, 2.5vw, 20px);
         border: 1px solid var(--border);
         display: flex;
         justify-content: space-between;
         align-items: center;
         flex-wrap: wrap;
-        gap: 12px;
+        gap: 16px;
         box-shadow: var(--shadow-sm);
         animation: fadeInScale 0.5s var(--animation-timing) forwards;
       }
 
       .header h1 {
-        font-size: clamp(1.1rem, 4vw, 1.4rem);
+        font-size: clamp(1.2rem, 4vw, 1.4rem);
         display: flex;
         align-items: center;
-        gap: 8px;
+        gap: 10px;
         background: var(--gradient-primary);
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
@@ -139,23 +138,23 @@
       .header-actions {
         display: flex;
         align-items: center;
-        gap: 8px;
+        gap: 10px;
       }
 
       .btn-base {
-        padding: 8px 16px;
+        padding: 10px 16px;
         background: var(--surface-solid);
         color: var(--text-main);
         border: 1px solid var(--border);
-        border-radius: 8px;
+        border-radius: 10px;
         cursor: pointer;
         display: flex;
         align-items: center;
         justify-content: center;
-        gap: 6px;
+        gap: 8px;
         text-decoration: none;
         font-weight: 600;
-        font-size: clamp(0.85rem, 2.5vw, 0.95rem);
+        font-size: clamp(0.9rem, 2.5vw, 1rem);
         transition: all 0.3s;
         white-space: nowrap;
       }
@@ -168,27 +167,27 @@
       }
 
       .icon-only-btn {
-        padding: 8px;
-        border-radius: 8px;
+        padding: 10px;
+        border-radius: 10px;
       }
 
       /* ── Ambilight & Player Base ── */
       .player-container {
         position: relative;
-        margin: 0 auto 20px auto;
+        margin: 0 auto;
         border-radius: var(--radius-lg);
         opacity: 0;
         animation: fadeInScale 0.6s var(--animation-timing) 0.1s forwards;
-        width: fit-content;
-        max-width: 100%;
-        min-width: 280px;
+        width: 100%;
+        display: flex;
+        flex-direction: column;
       }
 
-      .player-container[data-type="audio"],
-      .player-container[data-type="pdf"],
-      .player-container[data-type="code"],
-      .player-container[data-type="other"] {
-        width: 100%;
+      /* CRITICAL FIX: Ensure the video container shrinks to fit the video aspect ratio */
+      .player-container[data-type="video"],
+      .player-container[data-type="image"] {
+        width: fit-content;
+        margin: 0 auto;
       }
 
       .player-container.ambient-active::before {
@@ -219,9 +218,9 @@
             transparent 60%
           );
         filter: blur(32px);
-        opacity: 0.75;
+        opacity: 0.85;
         pointer-events: none;
-        transition: background 0.12s linear;
+        transition: background 0.15s ease-out;
       }
 
       #ambientCanvas {
@@ -244,15 +243,14 @@
 
       .player-container:not([data-type="video"]):not([data-type="image"])
         .player-wrapper {
-        min-height: clamp(200px, 40vh, 400px);
+        min-height: clamp(220px, 40vh, 400px);
       }
 
-      /* Audio Visualizer Container */
       .audio-view {
         position: relative;
         width: 100%;
         height: 100%;
-        min-height: clamp(200px, 40vh, 400px);
+        min-height: clamp(220px, 40vh, 400px);
         display: flex;
         flex-direction: column;
         align-items: center;
@@ -263,8 +261,8 @@
       .audio-icon-wrapper {
         position: absolute;
         z-index: 2;
-        width: 80px;
-        height: 80px;
+        width: clamp(70px, 15vw, 90px);
+        height: clamp(70px, 15vw, 90px);
         border-radius: 50%;
         background: var(--surface-solid);
         border: 2px solid var(--border);
@@ -273,6 +271,7 @@
         justify-content: center;
         color: var(--primary);
         box-shadow: var(--shadow-glow);
+        transition: transform 0.3s ease;
       }
 
       .audio-icon-wrapper.playing {
@@ -289,6 +288,7 @@
 
       video,
       .image-viewer {
+        /* CRITICAL FIX: Ensure media defines the bounds, not the container */
         width: auto;
         height: auto;
         max-height: 75vh;
@@ -299,7 +299,7 @@
       }
 
       audio {
-        display: none; /* Hidden, using custom controls & visualizer */
+        display: none;
       }
 
       .doc-viewer,
@@ -314,15 +314,17 @@
         padding: 20px;
         background: #0d0d0d;
         color: #d4d4d4;
-        font-family: "Courier New", monospace;
-        font-size: 14px;
+        font-family:
+          ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+        font-size: clamp(12px, 3vw, 14px);
         line-height: 1.6;
         width: 100%;
+        margin: 0;
       }
 
       /* ── Controls shell ── */
       .player-controls {
-        padding: clamp(12px, 3vw, 20px);
+        padding: clamp(16px, 3vw, 24px);
         background: var(--surface);
         backdrop-filter: blur(12px);
         -webkit-backdrop-filter: blur(12px);
@@ -355,7 +357,7 @@
 
       .time-elapsed,
       .time-countdown {
-        font-size: clamp(0.75rem, 2vw, 0.85rem);
+        font-size: clamp(0.8rem, 2.5vw, 0.9rem);
         font-weight: 700;
         font-variant-numeric: tabular-nums;
         letter-spacing: 0.5px;
@@ -364,12 +366,10 @@
       .time-elapsed {
         color: var(--primary);
       }
-
       .time-countdown {
         color: var(--text-muted);
         transition: color 0.3s;
       }
-
       .time-countdown.urgent {
         color: #ef4444;
       }
@@ -377,20 +377,21 @@
       .seek-track-wrap {
         position: relative;
         width: 100%;
-        height: 24px;
+        height: 36px; /* Larger touch area for mobile */
         display: flex;
         align-items: center;
         cursor: pointer;
         touch-action: none;
+        margin: -6px 0;
       }
 
       .seek-track {
         position: absolute;
         left: 0;
         right: 0;
-        height: 6px;
+        height: 8px;
         background: var(--surface-solid);
-        border-radius: 6px;
+        border-radius: 8px;
         border: 1px solid var(--border);
         overflow: hidden;
         transition: height 0.2s ease;
@@ -398,7 +399,7 @@
 
       .seek-track-wrap:hover .seek-track,
       .seek-track-wrap.dragging .seek-track {
-        height: 10px;
+        height: 12px;
       }
 
       .seek-fill {
@@ -414,16 +415,24 @@
         top: 50%;
         left: 0%;
         transform: translate(-50%, -50%);
-        width: 16px;
-        height: 16px;
+        width: 18px;
+        height: 18px;
         background: #fff;
         border-radius: 50%;
-        box-shadow: 0 0 0 4px rgba(249, 115, 22, 0.75);
+        box-shadow:
+          0 0 0 4px rgba(249, 115, 22, 0.75),
+          0 2px 5px rgba(0, 0, 0, 0.5);
         pointer-events: none;
         opacity: 0;
         transition:
           opacity 0.2s,
           transform 0.2s;
+      }
+
+      @media (pointer: coarse) {
+        .seek-thumb {
+          opacity: 1;
+        }
       }
 
       .seek-track-wrap:hover .seek-thumb,
@@ -434,25 +443,27 @@
 
       .seek-preview {
         position: absolute;
-        bottom: calc(100% + 12px);
+        bottom: calc(100% + 8px);
         left: 0%;
         transform: translateX(-50%);
         background: rgba(0, 0, 0, 0.9);
         color: #fff;
-        font-size: 0.8rem;
+        font-size: 0.85rem;
         font-weight: 700;
-        padding: 4px 10px;
-        border-radius: 6px;
+        padding: 6px 12px;
+        border-radius: 8px;
         white-space: nowrap;
         pointer-events: none;
         opacity: 0;
-        transition: opacity 0.1s;
+        transition: opacity 0.15s ease-in-out;
         border: 1px solid rgba(255, 255, 255, 0.15);
         backdrop-filter: blur(8px);
         z-index: 10;
+        box-shadow: var(--shadow-sm);
       }
 
-      .seek-track-wrap:hover .seek-preview {
+      .seek-track-wrap:hover .seek-preview,
+      .seek-track-wrap.dragging .seek-preview {
         opacity: 1;
       }
 
@@ -471,24 +482,24 @@
         align-items: center;
         gap: 6px;
         background: var(--surface-solid);
-        padding: 6px 12px;
-        border-radius: 12px;
+        padding: 8px 12px;
+        border-radius: 14px;
         border: 1px solid var(--border);
       }
 
       .btn-player {
-        padding: 8px;
+        padding: 10px;
         background: transparent;
         border: 1px solid transparent;
-        border-radius: 8px;
+        border-radius: 10px;
         cursor: pointer;
         color: var(--text-main);
         display: flex;
         align-items: center;
         justify-content: center;
         transition: all 0.2s ease;
-        min-width: 38px;
-        min-height: 38px;
+        min-width: 44px;
+        min-height: 44px;
       }
 
       .btn-player:hover {
@@ -505,19 +516,18 @@
 
       .btn-player.active:hover {
         transform: translateY(-2px) scale(1.05);
-        color: #fff;
       }
 
       .btn-player .lucide {
-        width: 20px;
-        height: 20px;
+        width: 22px;
+        height: 22px;
       }
 
       .playlist-info {
         background: var(--surface-solid);
-        padding: 8px 16px;
+        padding: 10px 16px;
         border-radius: 12px;
-        font-size: 0.85rem;
+        font-size: clamp(0.85rem, 2vw, 0.95rem);
         color: var(--text-muted);
         border: 1px solid var(--border);
         font-weight: 600;
@@ -526,7 +536,7 @@
         text-overflow: ellipsis;
         text-align: center;
         flex: 1;
-        max-width: 280px;
+        max-width: 300px;
       }
 
       .control-group select {
@@ -534,7 +544,7 @@
         border: none;
         color: var(--text-main);
         outline: none;
-        font-size: 0.9rem;
+        font-size: 0.95rem;
         font-weight: 700;
         cursor: pointer;
         padding: 0 4px;
@@ -545,10 +555,10 @@
         color: var(--text-main);
       }
 
-      /* ── Custom Unified Sliders (Volume & Boost) ── */
+      /* ── Custom Unified Sliders ── */
       .mini-slider-wrap {
-        width: clamp(60px, 8vw, 90px);
-        height: 24px;
+        width: clamp(70px, 9vw, 90px);
+        height: 32px; /* Fat touch target */
         display: flex;
         align-items: center;
         position: relative;
@@ -569,7 +579,7 @@
 
       .mini-slider-wrap:hover .mini-slider-track,
       .mini-slider-wrap.dragging .mini-slider-track {
-        height: 9px;
+        height: 10px;
       }
 
       .mini-slider-fill {
@@ -582,11 +592,11 @@
 
       .mini-slider-thumb {
         position: absolute;
-        right: -6px;
+        right: -8px;
         top: 50%;
         transform: translateY(-50%);
-        width: 12px;
-        height: 12px;
+        width: 16px;
+        height: 16px;
         background: #fff;
         border-radius: 50%;
         opacity: 0;
@@ -594,6 +604,15 @@
           opacity 0.2s,
           transform 0.2s;
         pointer-events: none;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.4);
+      }
+
+      @media (pointer: coarse) {
+        .mini-slider-thumb {
+          opacity: 1;
+          width: 14px;
+          height: 14px;
+        }
       }
 
       .mini-slider-wrap:hover .mini-slider-thumb,
@@ -605,7 +624,6 @@
       .vol-fill {
         background: var(--gradient-primary);
       }
-
       .vol-fill .mini-slider-thumb {
         box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.6);
       }
@@ -613,16 +631,15 @@
       .boost-fill {
         background: #ef4444;
       }
-
       .boost-fill .mini-slider-thumb {
         box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.6);
       }
 
       .divider {
         width: 1px;
-        height: 20px;
+        height: 24px;
         background: var(--border);
-        margin: 0 4px;
+        margin: 0 6px;
       }
 
       /* ── OSD Toast ── */
@@ -633,21 +650,23 @@
         transform: translate(-50%, -50%) scale(0.85);
         background: rgba(0, 0, 0, 0.85);
         color: #fff;
-        padding: 14px 28px;
-        border-radius: 16px;
-        font-size: clamp(1.1rem, 3vw, 1.3rem);
+        padding: 16px 32px;
+        border-radius: 20px;
+        font-size: clamp(1.2rem, 4vw, 1.4rem);
         font-weight: 700;
         pointer-events: none;
         opacity: 0;
         transition:
           opacity 0.2s,
-          transform 0.2s;
+          transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
         z-index: 9999;
-        backdrop-filter: blur(10px);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
         border: 1px solid rgba(255, 255, 255, 0.15);
         display: flex;
         align-items: center;
-        gap: 12px;
+        gap: 14px;
+        box-shadow: var(--shadow-lg);
       }
 
       #osd.show {
@@ -657,7 +676,6 @@
 
       /* ── Media Info Dashboard ── */
       .media-info {
-        margin-top: 16px;
         opacity: 0;
         animation: slideUp 0.5s var(--animation-timing) 0.2s forwards;
         width: 100%;
@@ -665,7 +683,7 @@
 
       .stats-dashboard {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
         gap: 16px;
         margin-bottom: 24px;
       }
@@ -674,7 +692,7 @@
         background: var(--surface);
         backdrop-filter: blur(12px);
         -webkit-backdrop-filter: blur(12px);
-        padding: 16px;
+        padding: 20px;
         border-radius: var(--radius-lg);
         border: 1px solid var(--border);
         transition:
@@ -682,6 +700,9 @@
           box-shadow 0.3s,
           border-color 0.3s;
         box-shadow: var(--shadow-sm);
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
       }
 
       .stat-card:hover {
@@ -691,39 +712,40 @@
       }
 
       .stat-label {
-        font-size: 0.8rem;
+        font-size: 0.85rem;
         color: var(--text-muted);
-        margin-bottom: 6px;
+        margin-bottom: 8px;
         font-weight: 700;
         text-transform: uppercase;
         letter-spacing: 1px;
         display: flex;
         align-items: center;
-        gap: 6px;
+        gap: 8px;
       }
 
       .stat-value {
-        font-size: 1.05rem;
+        font-size: clamp(1rem, 3vw, 1.15rem);
         font-weight: 700;
         color: var(--text-main);
-        word-break: break-all;
+        word-break: break-word;
       }
 
       .download-link {
         display: inline-flex;
         align-items: center;
         justify-content: center;
-        gap: 8px;
-        padding: 14px 28px;
+        gap: 10px;
+        padding: 16px 32px;
         background: var(--gradient-primary);
         color: #fff;
         text-decoration: none;
-        border-radius: 12px;
+        border-radius: 14px;
         font-weight: 700;
-        font-size: 1rem;
+        font-size: 1.05rem;
         box-shadow: var(--shadow-glow);
         transition: all 0.3s ease;
         border: none;
+        width: fit-content;
       }
 
       .download-link:hover {
@@ -732,102 +754,129 @@
       }
 
       .playlist-stats {
-        font-size: 0.75rem;
+        font-size: 0.8rem;
         color: var(--text-muted);
-        margin-top: 4px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: 4px;
-      }
-
-      .playlist-header-row {
+        margin-top: 6px;
         display: flex;
         align-items: center;
         justify-content: center;
         gap: 6px;
       }
 
+      .playlist-header-row {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+      }
+
       /* ════════════════════════════════
             RESPONSIVE BREAKPOINTS
         ════════════════════════════════ */
-      @media (max-width: 992px) {
+      @media (max-width: 1024px) {
         .controls-row {
           flex-wrap: wrap;
           justify-content: center;
         }
-
         .playlist-info {
           max-width: 100%;
           order: -1;
-          margin-bottom: 4px;
+          margin-bottom: 8px;
         }
       }
 
-      @media (max-width: 640px) {
+      @media (max-width: 768px) {
+        .header {
+          flex-direction: column;
+          align-items: stretch;
+          text-align: center;
+        }
+        .header h1 {
+          justify-content: center;
+          margin-bottom: 4px;
+        }
+        .header-actions {
+          justify-content: center;
+          width: 100%;
+        }
+
         .controls-row {
           flex-direction: column;
           align-items: stretch;
-          gap: 12px;
+          gap: 16px;
+        }
+        .control-group {
+          justify-content: center;
+          flex-wrap: wrap;
+          padding: 12px;
+        }
+
+        .stats-dashboard {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      @media (max-width: 480px) {
+        .container {
+          padding: 8px;
+        }
+        .header {
+          padding: 12px;
+        }
+        .player-controls {
+          padding: 16px 12px;
         }
 
         .control-group {
           justify-content: space-between;
-          flex: 1;
-          width: 100%;
           padding: 8px 10px;
-          flex-wrap: wrap;
+          gap: 6px;
         }
 
         #audioToolsGroup {
-          flex-wrap: wrap;
           justify-content: center;
-          gap: 8px;
+          gap: 12px;
         }
 
         .mini-slider-wrap {
-          width: 65px;
+          width: 60px;
         }
 
         .control-group select {
-          max-width: 50px;
-          font-size: 0.8rem;
+          max-width: 55px;
+          font-size: 0.85rem;
+          padding: 8px 4px;
+          background: var(--surface);
+          border-radius: 6px;
         }
 
         .divider {
           margin: 0 4px;
         }
-
+        #boostWrap,
         #boostValue {
           display: none;
         }
 
         .btn-player {
-          min-width: 44px;
-          min-height: 44px;
-          padding: 8px;
+          min-width: 40px;
+          min-height: 40px;
+        }
+        .btn-player .lucide {
+          width: 20px;
+          height: 20px;
         }
 
-        .btn-player .lucide {
+        .seek-track {
+          height: 10px;
+        }
+        .seek-thumb {
           width: 22px;
           height: 22px;
         }
 
-        .seek-thumb {
-          opacity: 1;
-        }
-
-        .seek-track {
-          height: 8px;
-        }
-
-        .player-container {
+        .download-link {
           width: 100%;
-        }
-
-        .header-actions {
-          flex-wrap: wrap;
-          justify-content: flex-end;
         }
       }
     </style>
@@ -842,7 +891,7 @@
             class="btn-base icon-only-btn"
             id="themeToggleBtn"
             onclick="toggleTheme()"
-            title="Toggle Theme"
+            aria-label="Toggle Theme"
           >
             <i data-lucide="sun"></i>
           </button>
@@ -863,11 +912,11 @@
               data-lucide="loader-2"
               class="spinner"
               style="
-                width: 44px;
-                height: 44px;
+                width: 48px;
+                height: 48px;
                 color: var(--primary);
                 display: block;
-                margin: 0 auto 14px;
+                margin: 0 auto 16px;
               "
             ></i>
             <p>Loading media…</p>
@@ -940,8 +989,8 @@
               <i
                 data-lucide="gauge"
                 style="
-                  width: 16px;
-                  height: 16px;
+                  width: 18px;
+                  height: 18px;
                   color: var(--text-muted);
                   flex-shrink: 0;
                 "
@@ -964,7 +1013,7 @@
                 id="muteBtn"
                 onclick="toggleMute()"
                 title="Mute (M)"
-                style="padding: 4px; min-width: 30px; min-height: 30px"
+                style="padding: 6px"
               >
                 <i data-lucide="volume-2"></i>
               </button>
@@ -979,8 +1028,8 @@
               <i
                 data-lucide="speaker"
                 style="
-                  width: 16px;
-                  height: 16px;
+                  width: 18px;
+                  height: 18px;
                   color: var(--text-muted);
                   flex-shrink: 0;
                 "
@@ -995,9 +1044,9 @@
               <span
                 id="boostValue"
                 style="
-                  font-size: 0.8rem;
+                  font-size: 0.9rem;
                   font-weight: 700;
-                  width: 24px;
+                  width: 32px;
                   color: var(--text-main);
                   flex-shrink: 0;
                   text-align: center;
@@ -1072,19 +1121,71 @@
       // Audio Visualizer Variables
       let audioContext = null,
         gainNode = null,
-        analyserNode = null;
-      let visualizerRafId = null;
-
+        analyserNode = null,
+        visualizerRafId = null;
       const SPEEDS = [0.5, 0.75, 1, 1.25, 1.5, 2];
       let osdTimer = null;
 
+      // Color palettes for audio visualizer (Excluding Pink/Magenta)
+      const audioPalettes = [
+        [
+          { r: 239, g: 68, b: 68 },
+          { r: 249, g: 115, b: 22 },
+          { r: 239, g: 68, b: 68 },
+        ], // Fire
+        [
+          { r: 14, g: 165, b: 233 },
+          { r: 59, g: 130, b: 246 },
+          { r: 14, g: 165, b: 233 },
+        ], // Ocean
+        [
+          { r: 16, g: 185, b: 129 },
+          { r: 34, g: 197, b: 94 },
+          { r: 16, g: 185, b: 129 },
+        ], // Forest
+        [
+          { r: 245, g: 158, b: 11 },
+          { r: 234, g: 179, b: 8 },
+          { r: 245, g: 158, b: 11 },
+        ], // Sun
+        [
+          { r: 139, g: 92, b: 246 },
+          { r: 99, g: 102, b: 241 },
+          { r: 139, g: 92, b: 246 },
+        ], // Electric
+        [
+          { r: 6, g: 182, b: 212 },
+          { r: 59, g: 130, b: 246 },
+          { r: 6, g: 182, b: 212 },
+        ], // Cyber
+      ];
+      let currentPaletteIdx = 0;
+      let nextPaletteIdx = 1;
+      let transitionProgress = 0;
+      const transitionSpeed = 0.005; // Adjust for smoother/faster transitions
+
+      function interpolateColor(color1, color2, factor) {
+        const r = Math.round(color1.r + factor * (color2.r - color1.r));
+        const g = Math.round(color1.g + factor * (color2.g - color1.g));
+        const b = Math.round(color1.b + factor * (color2.b - color1.b));
+        return `rgb(${r}, ${g}, ${b})`;
+      }
+
+      function interpolateColorRaw(color1, color2, factor) {
+        return {
+          r: Math.round(color1.r + factor * (color2.r - color1.r)),
+          g: Math.round(color1.g + factor * (color2.g - color1.g)),
+          b: Math.round(color1.b + factor * (color2.b - color1.b)),
+        };
+      }
+
       function showOSD(icon, text) {
         const el = document.getElementById("osd");
-        el.innerHTML = `<i data-lucide="${icon}" style="width:22px;height:22px;flex-shrink:0;"></i><span>${text}</span>`;
+        el.innerHTML = `<i data-lucide="${icon}" style="width:28px;height:28px;flex-shrink:0;"></i><span>${text}</span>`;
         lucide.createIcons({ nodes: [el] });
         el.classList.add("show");
         clearTimeout(osdTimer);
-        osdTimer = setTimeout(() => el.classList.remove("show"), 1300);
+        osdTimer = setTimeout(() => el.classList.remove("show"), 1500);
       }
 
       function parseURLParams() {
@@ -1129,10 +1230,9 @@
             if (!res.ok) return;
             let files = await res.json();
             if (currentFolder) {
-              files = files.filter((f) => {
-                const filePathNorm = normalizePath(f.path || f.filename);
-                return filePathNorm.startsWith(currentFolder);
-              });
+              files = files.filter((f) =>
+                normalizePath(f.path || f.filename).startsWith(currentFolder),
+              );
             }
             allItems = files;
           }
@@ -1158,11 +1258,11 @@
           currentIndex = playlist.findIndex(
             (item) => normalizePath(item.path) === filePath,
           );
-          if (currentIndex === -1 && playlist.length > 0) {
-            currentIndex = playlist.findIndex((item) => {
-              return item.name.split("/").pop() === filePath.split("/").pop();
-            });
-          }
+          if (currentIndex === -1 && playlist.length > 0)
+            currentIndex = playlist.findIndex(
+              (item) =>
+                item.name.split("/").pop() === filePath.split("/").pop(),
+            );
           if (currentIndex === -1 && playlist.length > 0) currentIndex = 0;
 
           updatePlaylistInfo();
@@ -1181,7 +1281,7 @@
           const shuffleIcon =
             '<i data-lucide="shuffle" style="width:14px;height:14px;vertical-align:middle;margin-left:4px;"></i>';
           const folderIcon =
-            '<i data-lucide="folder" style="width:12px;height:12px;vertical-align:middle;margin-right:4px;"></i>';
+            '<i data-lucide="folder" style="width:14px;height:14px;vertical-align:middle;margin-right:6px;"></i>';
           const safeFolderName = currentFolder
             ? escapeHtml(currentFolder.split("/").pop())
             : "All Files";
@@ -1189,7 +1289,7 @@
           if (playlist.length > 0) {
             info.innerHTML = `
                 <div class="playlist-header-row">
-                    ${currentIndex >= 0 ? currentIndex + 1 : 0}/${playlist.length}
+                    ${currentIndex >= 0 ? currentIndex + 1 : 0} of ${playlist.length} 
                     ${isShuffle ? shuffleIcon : playIcon}
                 </div>
                 <div class="playlist-stats">
@@ -1269,7 +1369,6 @@
 
         const type = getFileType(filePath, fileTypeStr);
         container.setAttribute("data-type", type);
-
         const isMediaFile = type !== "other" && type !== "";
         controls.style.display = isMediaFile ? "flex" : "none";
 
@@ -1287,7 +1386,7 @@
         }
 
         document.getElementById("ambientBtn").style.display =
-          type === "video" ? "flex" : "none";
+          type === "video" || type === "audio" ? "flex" : "none";
         document.getElementById("pipBtn").style.display =
           type === "video" ? "flex" : "none";
 
@@ -1300,7 +1399,7 @@
           wrapper.innerHTML = `
             <div class="audio-view">
               <div class="audio-icon-wrapper" id="audioIconIndicator">
-                 <i data-lucide="music-4" style="width: 36px; height: 36px;"></i>
+                 <i data-lucide="music-4" style="width: 48px; height: 48px;"></i>
               </div>
               <canvas id="visualizerCanvas"></canvas>
             </div>
@@ -1310,17 +1409,17 @@
           mediaElement.volume = isMuted ? 0 : volume;
           setupAudioEvents();
         } else if (type === "image") {
-          wrapper.innerHTML = `<img src="${streamUrl}" class="image-viewer" alt="" style="max-height: 70vh;">`;
+          wrapper.innerHTML = `<img src="${streamUrl}" class="image-viewer" alt="">`;
           mediaElement = null;
         } else if (type === "pdf") {
           const isMobile = window.innerWidth <= 768;
           if (isMobile) {
             wrapper.innerHTML = `
-                <div style="padding:40px 20px;text-align:center;width:100%;">
-                    <i data-lucide="file-text" style="width:64px;height:64px;display:block;margin:0 auto 16px;color:var(--primary);"></i>
-                    <h3 style="margin-bottom:8px;font-size:1.2rem;">PDF Document</h3>
-                    <p style="color:var(--text-muted);font-size:0.9rem;margin-bottom:24px;">Inline viewing is limited on mobile browsers.</p>
-                    <a href="${streamUrl}" target="_blank" class="download-link">Read PDF</a>
+                <div style="padding:50px 20px;text-align:center;width:100%;">
+                    <i data-lucide="file-text" style="width:72px;height:72px;display:block;margin:0 auto 20px;color:var(--primary);"></i>
+                    <h3 style="margin-bottom:12px;font-size:1.4rem;">PDF Document</h3>
+                    <p style="color:var(--text-muted);font-size:1rem;margin-bottom:30px; line-height:1.5;">Inline viewing is limited on mobile browsers.<br/>Download to view full content.</p>
+                    <a href="${streamUrl}" target="_blank" class="download-link"><i data-lucide="external-link"></i> Read PDF</a>
                 </div>`;
           } else {
             wrapper.innerHTML = `<iframe src="${streamUrl}" class="doc-viewer" title="Document"></iframe>`;
@@ -1378,8 +1477,11 @@
           startVisualizerLoop();
           const iconInd = document.getElementById("audioIconIndicator");
           if (iconInd) iconInd.classList.add("playing");
+          if (isAmbientMode)
+            document
+              .getElementById("playerContainer")
+              .classList.add("ambient-active");
         }
-
         document.getElementById("playPauseBtn").innerHTML =
           '<i data-lucide="pause"></i>';
         lucide.createIcons();
@@ -1391,7 +1493,6 @@
         stopVisualizerLoop();
         const iconInd = document.getElementById("audioIconIndicator");
         if (iconInd) iconInd.classList.remove("playing");
-
         document.getElementById("playPauseBtn").innerHTML =
           '<i data-lucide="play"></i>';
         lucide.createIcons();
@@ -1400,11 +1501,10 @@
       function initAudioProcessor() {
         if (!mediaElement) return;
         try {
-          if (!audioContext) {
+          if (!audioContext)
             audioContext = new (
               window.AudioContext || window.webkitAudioContext
             )();
-          }
           if (!analyserNode) {
             analyserNode = audioContext.createAnalyser();
             analyserNode.fftSize = 256;
@@ -1424,7 +1524,7 @@
         }
       }
 
-      /* ─── Audio Visualizer ─── */
+      /* ─── Audio Visualizer & Smooth Ambilight ─── */
       function startVisualizerLoop() {
         if (
           !analyserNode ||
@@ -1435,48 +1535,100 @@
           return;
         const canvas = document.getElementById("visualizerCanvas");
         if (!canvas) return;
-
-        // Ensure exact sizing to prevent blurring
         const rect = canvas.parentElement.getBoundingClientRect();
         canvas.width = rect.width;
         canvas.height = rect.height;
-
         const ctx = canvas.getContext("2d");
         const bufferLength = analyserNode.frequencyBinCount;
         const dataArray = new Uint8Array(bufferLength);
+        const root = document.documentElement;
 
         function draw() {
           if (!isPlaying || !analyserNode) return;
-
           visualizerRafId = requestAnimationFrame(draw);
           analyserNode.getByteFrequencyData(dataArray);
-
           ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+          // Smooth Palette Transition Logic
+          transitionProgress += transitionSpeed;
+          if (transitionProgress >= 1) {
+            transitionProgress = 0;
+            currentPaletteIdx = nextPaletteIdx;
+            nextPaletteIdx = (nextPaletteIdx + 1) % audioPalettes.length;
+          }
+
+          const currPal = audioPalettes[currentPaletteIdx];
+          const nextPal = audioPalettes[nextPaletteIdx];
+
+          const activeColor1 = interpolateColorRaw(
+            currPal[0],
+            nextPal[0],
+            transitionProgress,
+          );
+          const activeColor2 = interpolateColorRaw(
+            currPal[1],
+            nextPal[1],
+            transitionProgress,
+          );
+          const activeColor3 = interpolateColorRaw(
+            currPal[2],
+            nextPal[2],
+            transitionProgress,
+          );
+
+          // Ambilight logic for Audio
+          if (isAmbientMode) {
+            let sum = 0;
+            for (let i = 0; i < bufferLength; i++) sum += dataArray[i];
+            const avg = sum / bufferLength;
+            const intensity = Math.max(0.15, (avg / 255) * 0.9);
+
+            root.style.setProperty(
+              "--ambient-tl",
+              `rgba(${activeColor1.r},${activeColor1.g},${activeColor1.b},${intensity})`,
+            );
+            root.style.setProperty(
+              "--ambient-tr",
+              `rgba(${activeColor2.r},${activeColor2.g},${activeColor2.b},${intensity})`,
+            );
+            root.style.setProperty(
+              "--ambient-bl",
+              `rgba(${activeColor3.r},${activeColor3.g},${activeColor3.b},${intensity})`,
+            );
+            root.style.setProperty(
+              "--ambient-br",
+              `rgba(${activeColor1.r},${activeColor1.g},${activeColor1.b},${intensity})`,
+            );
+          }
 
           const barWidth = (canvas.width / bufferLength) * 2.5;
           let x = 0;
           const centerY = canvas.height / 2;
 
           for (let i = 0; i < bufferLength; i++) {
-            // Smooth scaling of bar height
             const barHeight = (dataArray[i] / 255) * (canvas.height * 0.7);
-
-            // Create gradient for bars
             const gradient = ctx.createLinearGradient(
               0,
               centerY - barHeight / 2,
               0,
               centerY + barHeight / 2,
             );
-            gradient.addColorStop(0, "#ef4444");
-            gradient.addColorStop(0.5, "#f97316");
-            gradient.addColorStop(1, "#ef4444");
+            gradient.addColorStop(
+              0,
+              `rgb(${activeColor1.r},${activeColor1.g},${activeColor1.b})`,
+            );
+            gradient.addColorStop(
+              0.5,
+              `rgb(${activeColor2.r},${activeColor2.g},${activeColor2.b})`,
+            );
+            gradient.addColorStop(
+              1,
+              `rgb(${activeColor3.r},${activeColor3.g},${activeColor3.b})`,
+            );
 
             ctx.fillStyle = gradient;
-            // Draw centered symmetrical bars
             ctx.fillRect(x, centerY - barHeight / 2, barWidth, barHeight);
-
-            x += barWidth + 2; // + spacing
+            x += barWidth + 2;
           }
         }
         draw();
@@ -1527,7 +1679,6 @@
       const seekWrap = document.getElementById("seekTrackWrap"),
         seekPreview = document.getElementById("seekPreview");
       let seekDragging = false;
-
       function clientXFromEvent(e) {
         return e.touches ? e.touches[0].clientX : e.clientX;
       }
@@ -1551,8 +1702,8 @@
         seekPreview.style.left = `${frac * 100}%`;
         const ww = seekWrap.getBoundingClientRect().width,
           px = frac * ww;
-        if (px < 36) seekPreview.style.transform = "translateX(0)";
-        else if (px > ww - 36)
+        if (px < 40) seekPreview.style.transform = "translateX(0)";
+        else if (px > ww - 40)
           seekPreview.style.transform = "translateX(-100%)";
         else seekPreview.style.transform = "translateX(-50%)";
       }
@@ -1935,14 +2086,16 @@
       function toggleAmbientMode() {
         isAmbientMode = !isAmbientMode;
         const btn = document.getElementById("ambientBtn");
+
         if (isAmbientMode) {
           btn.classList.add("active");
-          if (
-            mediaElement &&
-            !mediaElement.paused &&
-            mediaElement.tagName === "VIDEO"
-          )
-            startAmbientLoop();
+          if (mediaElement && !mediaElement.paused) {
+            if (mediaElement.tagName === "VIDEO") startAmbientLoop();
+            else if (mediaElement.tagName === "AUDIO")
+              document
+                .getElementById("playerContainer")
+                .classList.add("ambient-active");
+          }
           showOSD("sun-dim", "Ambilight ON");
         } else {
           btn.classList.remove("active");
@@ -1958,13 +2111,13 @@
       /* ─── Info helpers ─── */
       function showDownloadOnly(url) {
         document.getElementById("playerWrapper").innerHTML =
-          `<div style="padding:50px;text-align:center;color:var(--text-muted);"><i data-lucide="file-x" style="width:56px;height:56px;display:block;margin:0 auto 14px;"></i><p style="font-size:1rem;font-weight:600;margin-bottom:6px;">Preview Unavailable</p><a href="${url}" class="download-link" download>Download</a></div>`;
+          `<div style="padding:60px 20px;text-align:center;color:var(--text-muted);"><i data-lucide="file-x" style="width:64px;height:64px;display:block;margin:0 auto 20px;"></i><p style="font-size:1.1rem;font-weight:600;margin-bottom:12px;">Preview Unavailable</p><a href="${url}" class="download-link" download><i data-lucide="download"></i> Download File</a></div>`;
         lucide.createIcons();
       }
 
       function showError(msg) {
         document.getElementById("playerWrapper").innerHTML =
-          `<div style="padding:50px;text-align:center;"><i data-lucide="alert-circle" style="width:56px;height:56px;display:block;margin:0 auto 14px;color:#ef4444;"></i><p style="font-weight:600;">${msg}</p></div>`;
+          `<div style="padding:60px 20px;text-align:center;"><i data-lucide="alert-circle" style="width:64px;height:64px;display:block;margin:0 auto 20px;color:#ef4444;"></i><p style="font-weight:600; font-size: 1.1rem;">${msg}</p></div>`;
         lucide.createIcons();
       }
 
@@ -1974,7 +2127,7 @@
           audio: "music",
           image: "image",
           pdf: "file-text",
-          code: "file-text",
+          code: "file-code-2",
         };
         document.getElementById("mediaInfo").innerHTML = `
             <div class="stats-dashboard">
@@ -1988,7 +2141,7 @@
                 </div>
             </div>
             <div style="text-align:center;">
-                <a href="${url}" class="download-link" download><i data-lucide="download"></i> Download Original</a>
+                <a href="${url}" class="download-link" download><i data-lucide="download"></i> Download Original File</a>
             </div>
         `;
         lucide.createIcons();

@@ -1,0 +1,36 @@
+version: '3.8'
+
+services:
+  file-transfer-server:
+    build: .
+    container_name: file-transfer-server
+    ports:
+      - "9090:9090"
+    volumes:
+      # Mount your storage directory (optional)
+      - "C:/Users/Vasu/Downloads/Telegram Desktop:/app/storage"
+      # Mount logs directory for persistence
+      - ./logs:/app/logs
+    environment:
+      - SERVER_PORT=9090
+      - FILE_STORAGE_PATH=/app/storage
+      - FILE_MAX_SIZE=1073741824
+      - JAVA_OPTS=-Xmx512m -Xms256m
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:9090/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - file-transfer-network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+networks:
+  file-transfer-network:
+    driver: bridge

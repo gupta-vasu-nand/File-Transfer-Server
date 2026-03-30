@@ -1,0 +1,11 @@
+version: '3.8'
+
+services:
+  file-transfer-server:
+    environment:
+      - JAVA_OPTS=-Xmx512m -Xms256m -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:5005
+    ports:
+      - "9090:9090"
+      - "5005:5005"  # Debug port
+    volumes:
+      - ./src:/app/src  # Mount source for hot reload (requires additional setup)
