@@ -2,7 +2,6 @@ package org.vng.filetransferserver.service.impl
 
 import mu.KotlinLogging
 import org.apache.tika.Tika
-import org.springframework.core.io.FileSystemResource
 import org.springframework.http.HttpHeaders
 import org.springframework.http.HttpStatus
 import org.springframework.stereotype.Service
@@ -57,60 +56,165 @@ class StreamingServiceImpl(
         val rangeHeader = request.getHeader("Range")
         val (start, end) = parseRange(rangeHeader, fileSize)
 
-        response.setHeader(HttpHeaders.CONTENT_TYPE, contentType)
-        response.setHeader(HttpHeaders.ACCEPT_RANGES, "bytes")
+        try {
+            response.setHeader(HttpHeaders.CONTENT_TYPE, contentType)
+            response.setHeader(HttpHeaders.ACCEPT_RANGES, "bytes")
 
-        if (rangeHeader == null) {
-            // Return full file
-            response.setHeader(HttpHeaders.CONTENT_LENGTH, fileSize.toString())
-            response.status = HttpStatus.OK.value()
+            if (rangeHeader == null) {
+                // Return full file
+                response.setHeader(HttpHeaders.CONTENT_LENGTH, fileSize.toString())
+                response.status = HttpStatus.OK.value()
 
-            try {
-                FileSystemResource(file).inputStream.use { input ->
-                    input.copyTo(response.outputStream)
+                file.inputStream().use { input ->
+                    val buffer = ByteArray(8192)
+                    var bytesRead: Int
+                    var totalWritten = 0L
+                    try {
+                        while (input.read(buffer).also { bytesRead = it } != -1) {
+                            try {
+                                response.outputStream.write(buffer, 0, bytesRead)
+                                totalWritten += bytesRead
+                                // Flush periodically but catch disconnects
+                                if (totalWritten % (8192 * 10) == 0L) {
+                                    try {
+                                        response.outputStream.flush()
+                                    } catch (e: IOException) {
+                                        if (isClientDisconnect(e)) {
+                                            logger.debug { "Client disconnected during flush at ${totalWritten}/${fileSize} bytes" }
+                                            return
+                                        }
+                                        throw e
+                                    }
+                                }
+                            } catch (e: IOException) {
+                                if (isClientDisconnect(e)) {
+                                    logger.debug { "Client disconnected during write at ${totalWritten}/${fileSize} bytes" }
+                                    return
+                                }
+                                throw e
+                            }
+                        }
+                        // Final flush
+                        try {
+                            response.outputStream.flush()
+                        } catch (e: IOException) {
+                            if (isClientDisconnect(e)) {
+                                logger.debug { "Client disconnected during final flush" }
+                                return
+                            }
+                            throw e
+                        }
+                    } catch (e: IOException) {
+                        if (isClientDisconnect(e)) {
+                            logger.debug { "Client disconnected during streaming: $path" }
+                            return
+                        }
+                        throw e
+                    }
                 }
-                response.outputStream.flush()
-            } catch (e: IOException) {
-                if (e.message?.contains("Broken pipe") == true) {
-                    logger.debug { "Client disconnected during streaming" }
-                } else {
-                    logger.error(e) { "Error streaming file" }
-                    throw e
-                }
-            }
-        } else {
-            // Return partial content
-            val contentLength = end - start + 1
-            response.setHeader(HttpHeaders.CONTENT_LENGTH, contentLength.toString())
-            response.setHeader(HttpHeaders.CONTENT_RANGE, "bytes $start-$end/$fileSize")
-            response.status = HttpStatus.PARTIAL_CONTENT.value()
+                logger.debug { "Stream completed: $path, total: $fileSize bytes" }
+            } else {
+                // Return partial content
+                val contentLength = end - start + 1
+                response.setHeader(HttpHeaders.CONTENT_LENGTH, contentLength.toString())
+                response.setHeader(HttpHeaders.CONTENT_RANGE, "bytes $start-$end/$fileSize")
+                response.status = HttpStatus.PARTIAL_CONTENT.value()
 
-            try {
                 RandomAccessFile(file, "r").use { raf ->
                     raf.seek(start)
                     val buffer = ByteArray(8192)
                     var bytesRead: Int
                     var bytesRemaining = contentLength
+                    var totalWritten = 0L
 
-                    while (bytesRemaining > 0 && raf.filePointer < fileSize) {
-                        bytesRead = raf.read(buffer, 0, minOf(buffer.size, bytesRemaining.toInt()))
-                        if (bytesRead == -1) break
-                        response.outputStream.write(buffer, 0, bytesRead)
-                        bytesRemaining -= bytesRead
+                    try {
+                        while (bytesRemaining > 0 && raf.filePointer < fileSize) {
+                            val readSize = minOf(buffer.size, bytesRemaining.toInt())
+                            bytesRead = raf.read(buffer, 0, readSize)
+                            if (bytesRead == -1) break
+
+                            try {
+                                response.outputStream.write(buffer, 0, bytesRead)
+                                totalWritten += bytesRead
+                                bytesRemaining -= bytesRead
+
+                                // Flush periodically
+                                if (totalWritten % (8192 * 10) == 0L) {
+                                    try {
+                                        response.outputStream.flush()
+                                    } catch (e: IOException) {
+                                        if (isClientDisconnect(e)) {
+                                            logger.debug { "Client disconnected during partial flush at ${totalWritten}/${contentLength} bytes" }
+                                            return
+                                        }
+                                        throw e
+                                    }
+                                }
+                            } catch (e: IOException) {
+                                if (isClientDisconnect(e)) {
+                                    logger.debug { "Client disconnected during partial write at ${totalWritten}/${contentLength} bytes" }
+                                    return
+                                }
+                                throw e
+                            }
+                        }
+                        // Final flush
+                        try {
+                            response.outputStream.flush()
+                        } catch (e: IOException) {
+                            if (isClientDisconnect(e)) {
+                                logger.debug { "Client disconnected during final partial flush" }
+                                return
+                            }
+                            throw e
+                        }
+                    } catch (e: IOException) {
+                        if (isClientDisconnect(e)) {
+                            logger.debug { "Client disconnected during partial streaming: $path" }
+                            return
+                        }
+                        throw e
                     }
+                    logger.debug { "Partial stream completed: $path, range: $rangeHeader, sent: $totalWritten bytes" }
                 }
-                response.outputStream.flush()
-            } catch (e: IOException) {
-                if (e.message?.contains("Broken pipe") == true) {
-                    logger.debug { "Client disconnected during streaming" }
-                } else {
-                    logger.error(e) { "Error streaming file" }
-                    throw e
+            }
+        } catch (e: IOException) {
+            if (isClientDisconnect(e)) {
+                logger.debug { "Client disconnected during streaming setup: $path" }
+                return
+            }
+            logger.error(e) { "Error streaming file: $path" }
+            // Only try to send error if response is still usable
+            if (!response.isCommitted) {
+                try {
+                    response.sendError(HttpStatus.INTERNAL_SERVER_ERROR.value(), "Streaming error")
+                } catch (ex: IllegalStateException) {
+                    logger.debug { "Response already committed, cannot send error" }
+                } catch (ex: IOException) {
+                    logger.debug { "Failed to send error response" }
+                }
+            }
+        } catch (e: Exception) {
+            logger.error(e) { "Unexpected error during streaming: $path" }
+            if (!response.isCommitted) {
+                try {
+                    response.sendError(HttpStatus.INTERNAL_SERVER_ERROR.value(), "Streaming error")
+                } catch (ex: IllegalStateException) {
+                    logger.debug { "Response already committed, cannot send error" }
+                } catch (ex: IOException) {
+                    logger.debug { "Failed to send error response" }
                 }
             }
         }
+    }
 
-        logger.debug { "Stream completed: $path, range: $rangeHeader" }
+    private fun isClientDisconnect(e: IOException): Boolean {
+        val message = e.message ?: ""
+        return message.contains("Broken pipe") ||
+                message.contains("Connection reset") ||
+                message.contains("An established connection was aborted") ||
+                message.contains("Software caused connection abort") ||
+                e is org.apache.catalina.connector.ClientAbortException
     }
 
     private fun parseRange(rangeHeader: String?, fileSize: Long): Pair<Long, Long> {
@@ -118,16 +222,21 @@ class StreamingServiceImpl(
             return 0L to (fileSize - 1)
         }
 
-        val bytesRange = rangeHeader.replace("bytes=", "")
-        val parts = bytesRange.split("-")
-        val start = parts[0].toLongOrNull() ?: 0L
-        val end = if (parts.size > 1 && parts[1].isNotEmpty()) {
-            parts[1].toLongOrNull() ?: (fileSize - 1)
-        } else {
-            fileSize - 1
-        }
+        try {
+            val bytesRange = rangeHeader.replace("bytes=", "")
+            val parts = bytesRange.split("-")
+            val start = parts[0].toLongOrNull() ?: 0L
+            val end = if (parts.size > 1 && parts[1].isNotEmpty()) {
+                parts[1].toLongOrNull() ?: (fileSize - 1)
+            } else {
+                fileSize - 1
+            }
 
-        return start to end
+            return start to end.coerceAtMost(fileSize - 1)
+        } catch (e: Exception) {
+            logger.warn(e) { "Invalid range header: $rangeHeader" }
+            return 0L to (fileSize - 1)
+        }
     }
 
     override fun getMediaInfo(path: String): Map<String, Any?> {
@@ -162,21 +271,23 @@ class StreamingServiceImpl(
 
         try {
             Files.walk(storagePath)
-                .filter { Files.isRegularFile(it) }
-                .forEach { file ->
-                    val contentType = tika.detect(file)
-                    if (contentType.startsWith("video/") || contentType.startsWith("audio/")) {
-                        val relativePath = storagePath.relativize(file).toString()
-                        mediaFiles.add(
-                            mapOf(
-                                "filename" to file.fileName.toString(),
-                                "path" to relativePath,
-                                "size" to Files.size(file),
-                                "contentType" to contentType,
-                                "streamUrl" to "/api/stream?path=${relativePath.replace("\\", "/")}"
-                            )
-                        )
-                    }
+                .use { stream ->
+                    stream.filter { Files.isRegularFile(it) }
+                        .forEach { file ->
+                            val contentType = tika.detect(file)
+                            if (contentType.startsWith("video/") || contentType.startsWith("audio/")) {
+                                val relativePath = storagePath.relativize(file).toString()
+                                mediaFiles.add(
+                                    mapOf(
+                                        "filename" to file.fileName.toString(),
+                                        "path" to relativePath,
+                                        "size" to Files.size(file),
+                                        "contentType" to contentType,
+                                        "streamUrl" to "/api/stream?path=${relativePath.replace("\\", "/")}"
+                                    )
+                                )
+                            }
+                        }
                 }
         } catch (e: IOException) {
             logger.error(e) { "Failed to list media files" }
