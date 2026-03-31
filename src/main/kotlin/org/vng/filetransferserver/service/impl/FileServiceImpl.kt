@@ -12,7 +12,6 @@ import org.vng.filetransferserver.util.FileUtils
 import java.io.IOException
 import java.nio.file.*
 import java.nio.file.attribute.BasicFileAttributes
-import java.time.Instant
 import java.time.LocalDateTime
 
 private val logger = KotlinLogging.logger {}
@@ -107,25 +106,48 @@ class FileServiceImpl(
 
     override fun deleteFile(path: String): Boolean {
         logger.info { "Deleting file: $path" }
-        val targetFile = resolvePath(path)
-
-        if (!Files.exists(targetFile)) {
-            throw FileNotFoundException("File not found: $path")
-        }
-
-        if (Files.isDirectory(targetFile)) {
-            throw InvalidFileTypeException("Cannot delete directory using file delete: $path")
-        }
 
         try {
+            val targetFile = resolvePath(path)
+            logger.debug { "Resolved path: ${targetFile.toAbsolutePath()}" }
+
+            if (!Files.exists(targetFile)) {
+                logger.warn { "File not found for deletion: $path" }
+                throw FileNotFoundException("File not found: $path")
+            }
+
+            if (Files.isDirectory(targetFile)) {
+                logger.warn { "Attempted to delete directory using file delete: $path" }
+                throw InvalidFileTypeException("Cannot delete directory using file delete. Use folder delete API instead.")
+            }
+
+            // Try to delete the file
             Files.delete(targetFile)
+
+            // Verify deletion
+            if (Files.exists(targetFile)) {
+                logger.error { "File still exists after deletion attempt: $path" }
+                throw FileStorageException("Failed to delete file: $path")
+            }
+
             logger.info { "File deleted successfully: $path" }
             return true
+
+        } catch (e: NoSuchFileException) {
+            logger.warn { "File not found during deletion: $path" }
+            throw FileNotFoundException("File not found: $path")
+        } catch (e: DirectoryNotEmptyException) {
+            logger.warn { "Directory not empty: $path" }
+            throw InvalidFileTypeException("Directory is not empty. Delete contents first.")
+        } catch (e: AccessDeniedException) {
+            logger.error { "Access denied when deleting file: $path" }
+            throw FileStorageException("Access denied: Cannot delete file. Check file permissions.")
         } catch (e: IOException) {
-            logger.error(e) { "Failed to delete file: $path" }
-            throw FileStorageException("Failed to delete file", e)
+            logger.error(e) { "IO error when deleting file: $path" }
+            throw FileStorageException("Failed to delete file: ${e.message}", e)
         }
     }
+
 
     override fun getFileMetadata(path: String): FileMetadataDTO {
         logger.debug { "Getting metadata for: $path" }

@@ -183,7 +183,6 @@
         flex-direction: column;
       }
 
-      /* CRITICAL FIX: Ensure the video container shrinks to fit the video aspect ratio */
       .player-container[data-type="video"],
       .player-container[data-type="image"] {
         width: fit-content;
@@ -288,7 +287,6 @@
 
       video,
       .image-viewer {
-        /* CRITICAL FIX: Ensure media defines the bounds, not the container */
         width: auto;
         height: auto;
         max-height: 75vh;
@@ -377,7 +375,7 @@
       .seek-track-wrap {
         position: relative;
         width: 100%;
-        height: 36px; /* Larger touch area for mobile */
+        height: 36px;
         display: flex;
         align-items: center;
         cursor: pointer;
@@ -558,7 +556,7 @@
       /* ── Custom Unified Sliders ── */
       .mini-slider-wrap {
         width: clamp(70px, 9vw, 90px);
-        height: 32px; /* Fat touch target */
+        height: 32px;
         display: flex;
         align-items: center;
         position: relative;
@@ -667,11 +665,20 @@
         align-items: center;
         gap: 14px;
         box-shadow: var(--shadow-lg);
+        max-width: 90vw; /* Prevents container from stretching past screen */
       }
 
       #osd.show {
         opacity: 1;
         transform: translate(-50%, -50%) scale(1);
+      }
+
+      /* Keep text strictly on a single line and cut off with ellipsis */
+      #osd span {
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        display: block;
       }
 
       /* ── Media Info Dashboard ── */
@@ -771,8 +778,8 @@
       }
 
       /* ════════════════════════════════
-            RESPONSIVE BREAKPOINTS
-        ════════════════════════════════ */
+              RESPONSIVE BREAKPOINTS
+          ════════════════════════════════ */
       @media (max-width: 1024px) {
         .controls-row {
           flex-wrap: wrap;
@@ -1289,7 +1296,7 @@
           if (playlist.length > 0) {
             info.innerHTML = `
                 <div class="playlist-header-row">
-                    ${currentIndex >= 0 ? currentIndex + 1 : 0} of ${playlist.length} 
+                    ${currentIndex >= 0 ? currentIndex + 1 : 0} of ${playlist.length}
                     ${isShuffle ? shuffleIcon : playIcon}
                 </div>
                 <div class="playlist-stats">
@@ -1642,8 +1649,8 @@
       }
 
       /* ════════════════════════════════
-         SEEKBAR + TIMERS
-      ════════════════════════════════ */
+       SEEKBAR + TIMERS
+    ════════════════════════════════ */
       function fmtTime(secs) {
         if (!isFinite(secs) || isNaN(secs)) return "0:00";
         secs = Math.max(0, Math.floor(secs));

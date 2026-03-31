@@ -12,6 +12,10 @@ import org.vng.filetransferserver.service.FileService
 import org.vng.filetransferserver.service.StreamingService
 import jakarta.servlet.http.HttpServletRequest
 import jakarta.servlet.http.HttpServletResponse
+import org.springframework.http.HttpStatus
+import org.vng.filetransferserver.exception.FileNotFoundException
+import org.vng.filetransferserver.exception.InvalidFileTypeException
+import org.vng.filetransferserver.exception.PathTraversalException
 import java.nio.file.Files
 
 private val logger = KotlinLogging.logger {}
@@ -19,15 +23,13 @@ private val logger = KotlinLogging.logger {}
 @RestController
 @RequestMapping("/api")
 class MediaController(
-    private val fileService: FileService,
-    private val streamingService: StreamingService
+    private val fileService: FileService, private val streamingService: StreamingService
 ) {
 
     // File Management Endpoints
     @PostMapping("/files/upload")
     fun uploadFile(
-        @RequestParam("file") file: MultipartFile,
-        @RequestParam(value = "path", required = false) folderPath: String?
+        @RequestParam("file") file: MultipartFile, @RequestParam(value = "path", required = false) folderPath: String?
     ): ResponseEntity<FileUploadResponseDTO> {
         logger.info { "POST /api/files/upload - file: ${file.originalFilename}, folder: $folderPath" }
         val response = fileService.uploadFile(file, folderPath)
@@ -43,8 +45,7 @@ class MediaController(
 
     @GetMapping("/files/{filename:.+}")
     fun downloadFile(
-        @PathVariable filename: String,
-        response: HttpServletResponse
+        @PathVariable filename: String, response: HttpServletResponse
     ) {
         logger.info { "GET /api/files/$filename" }
         val filePath = fileService.downloadFile(filename)
@@ -61,10 +62,60 @@ class MediaController(
     }
 
     @DeleteMapping("/files/{filename:.+}")
-    fun deleteFile(@PathVariable filename: String): ResponseEntity<Map<String, Any>> {
+    fun deleteFile(@PathVariable filename: String, request: HttpServletRequest): ResponseEntity<Map<String, Any>> {
         logger.info { "DELETE /api/files/$filename" }
-        fileService.deleteFile(filename)
-        return ResponseEntity.ok(mapOf("success" to true, "message" to "File deleted successfully"))
+
+        // Decode the filename if it was encoded
+        val decodedFilename = try {
+            java.net.URLDecoder.decode(filename, "UTF-8")
+        } catch (e: Exception) {
+            filename
+        }
+
+        logger.info { "Decoded filename: $decodedFilename" }
+
+        return try {
+            val success = fileService.deleteFile(decodedFilename)
+            ResponseEntity.ok(
+                mapOf(
+                    "success" to success,
+                    "message" to "File deleted successfully",
+                    "filename" to decodedFilename
+                )
+            )
+        } catch (e: FileNotFoundException) {
+            logger.error { "File not found: $decodedFilename" }
+            ResponseEntity.status(HttpStatus.NOT_FOUND).body(
+                mapOf(
+                    "success" to false,
+                    "message" to "File not found: $decodedFilename"
+                )
+            )
+        } catch (e: InvalidFileTypeException) {
+            logger.error { "Invalid file type: ${e.message}" }
+            ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
+                mapOf(
+                    "success" to false,
+                    "message" to (e.message ?: "Invalid file type")
+                )
+            )
+        } catch (e: PathTraversalException) {
+            logger.error { "Path traversal attempt: ${e.message}" }
+            ResponseEntity.status(HttpStatus.FORBIDDEN).body(
+                mapOf(
+                    "success" to false,
+                    "message" to "Access denied: Invalid path"
+                )
+            )
+        } catch (e: Exception) {
+            logger.error(e) { "Error deleting file: $decodedFilename" }
+            ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(
+                mapOf(
+                    "success" to false,
+                    "message" to "Failed to delete file: ${e.message}"
+                )
+            )
+        }
     }
 
     @GetMapping("/files/{filename:.+}/metadata")
@@ -76,8 +127,7 @@ class MediaController(
 
     @PutMapping("/files/move")
     fun moveFile(
-        @RequestParam source: String,
-        @RequestParam destination: String
+        @RequestParam source: String, @RequestParam destination: String
     ): ResponseEntity<Map<String, Any>> {
         logger.info { "PUT /api/files/move - source: $source, destination: $destination" }
         val success = fileService.moveFile(source, destination)
@@ -86,8 +136,7 @@ class MediaController(
 
     @PutMapping("/files/copy")
     fun copyFile(
-        @RequestParam source: String,
-        @RequestParam destination: String
+        @RequestParam source: String, @RequestParam destination: String
     ): ResponseEntity<Map<String, Any>> {
         logger.info { "PUT /api/files/copy - source: $source, destination: $destination" }
         val success = fileService.copyFile(source, destination)
@@ -96,8 +145,7 @@ class MediaController(
 
     @PutMapping("/files/rename")
     fun renameFile(
-        @RequestParam path: String,
-        @RequestParam newName: String
+        @RequestParam path: String, @RequestParam newName: String
     ): ResponseEntity<Map<String, Any>> {
         logger.info { "PUT /api/files/rename - path: $path, newName: $newName" }
         val success = fileService.renameFile(path, newName)
@@ -132,8 +180,7 @@ class MediaController(
 
     @PutMapping("/folders/move")
     fun moveFolder(
-        @RequestParam source: String,
-        @RequestParam destination: String
+        @RequestParam source: String, @RequestParam destination: String
     ): ResponseEntity<Map<String, Any>> {
         logger.info { "PUT /api/folders/move - source: $source, destination: $destination" }
         val success = fileService.moveFolder(source, destination)
@@ -150,9 +197,7 @@ class MediaController(
     // Streaming Endpoints
     @GetMapping("/stream")
     fun streamMedia(
-        @RequestParam("path") path: String,
-        request: HttpServletRequest,
-        response: HttpServletResponse
+        @RequestParam("path") path: String, request: HttpServletRequest, response: HttpServletResponse
     ) {
         logger.info { "GET /api/stream - path: $path" }
         streamingService.streamMedia(path, request, response)
@@ -175,8 +220,7 @@ class MediaController(
     // Search and System Endpoints
     @GetMapping("/search")
     fun searchFiles(
-        @RequestParam query: String,
-        @RequestParam(value = "folder", required = false) folderPath: String?
+        @RequestParam query: String, @RequestParam(value = "folder", required = false) folderPath: String?
     ): ResponseEntity<SearchResultDTO> {
         logger.info { "GET /api/search - query: $query, folder: $folderPath" }
         val results = fileService.searchFiles(query, folderPath)
@@ -214,9 +258,7 @@ class MediaController(
         val thumbnailPath = fileService.getThumbnail(path)
         if (thumbnailPath != null && Files.exists(thumbnailPath)) {
             val bytes = Files.readAllBytes(thumbnailPath)
-            return ResponseEntity.ok()
-                .contentType(MediaType.IMAGE_JPEG)
-                .body(bytes)
+            return ResponseEntity.ok().contentType(MediaType.IMAGE_JPEG).body(bytes)
         }
         return ResponseEntity.notFound().build()
     }
